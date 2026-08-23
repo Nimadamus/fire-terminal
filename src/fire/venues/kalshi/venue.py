@@ -69,6 +69,17 @@ def _asks_from_bids(bids: Optional[list]) -> tuple[BookLevel, ...]:
 
 
 
+def _epoch(stamp) -> Optional[float]:
+    """The API sends close_time as an ISO string, not a number."""
+    if not stamp:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return None
+
+
 def _coin(ticker: str) -> str:
     """BTC from KXBTC15M-26AUG231845-45. The coin is what belongs on a card."""
     head = ticker.split("-")[0]
@@ -85,7 +96,8 @@ def _instrument(raw: dict) -> Optional[Instrument]:
     ticker = raw.get("ticker")
     if not ticker:
         return None
-    close = raw.get("close_time_epoch") or raw.get("close_ts")
+    close = (raw.get("close_time_epoch") or raw.get("close_ts")
+             or _epoch(raw.get("close_time")))
     return Instrument(
         ticker=str(ticker),
         series=str(raw.get("series_ticker") or raw.get("event_ticker") or ""),

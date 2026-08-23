@@ -99,6 +99,24 @@ class CoinCard(Card):
                                 font=Font.price_sm)
         self.no_odds.pack(side="right")
 
+        if self.app.session.read_only:
+            # A viewer has no order entry at all: no stake box, no presets, no
+            # buttons. Leaving the inputs visible with nothing to submit to
+            # invites someone to type an amount and wonder what happened.
+            tk.Label(box, text="watching only", bg=p.panel, fg=p.accent,
+                     font=Font.label, anchor="w").pack(fill="x",
+                                                       pady=(Space.sm, 0))
+            hrule(box, p)
+            self.position = kv_row(box, p, "position", "flat")
+            self.status = tk.Label(box, text="", bg=p.panel, fg=p.text_faint,
+                                   font=Font.data_sm, anchor="w",
+                                   wraplength=CARD_W - 30, justify="left")
+            self.status.pack(fill="x", pady=(Space.xs, 0))
+            self.buy_yes = self.buy_no = self.stake_entry = None
+            self.stake_var = tk.StringVar(value="0")
+            self.limit_note = tk.Label(box, text="", bg=p.panel)
+            return
+
         stake = tk.Frame(box, bg=p.panel)
         stake.pack(fill="x", pady=(Space.md, Space.xs))
         tk.Label(stake, text="$", bg=p.panel, fg=p.text_faint,
@@ -123,21 +141,6 @@ class CoinCard(Card):
         self.limit_note = tk.Label(box, text="", bg=p.panel, fg=p.text_faint,
                                    font=Font.data_sm, anchor="w")
         self.limit_note.pack(fill="x", pady=(Space.sm, Space.sm))
-
-        if self.app.session.read_only:
-            # Removed, not disabled. A viewer has no order path at all, and a
-            # greyed out BUY button invites someone to wonder why.
-            tk.Label(box, text="watching only", bg=p.panel, fg=p.accent,
-                     font=Font.label, anchor="w").pack(fill="x",
-                                                       pady=(Space.sm, 0))
-            hrule(box, p)
-            self.position = kv_row(box, p, "position", "flat")
-            self.status = tk.Label(box, text="", bg=p.panel, fg=p.text_faint,
-                                   font=Font.data_sm, anchor="w",
-                                   wraplength=CARD_W - 30, justify="left")
-            self.status.pack(fill="x", pady=(Space.xs, 0))
-            self.buy_yes = self.buy_no = None
-            return
 
         buttons = tk.Frame(box, bg=p.panel)
         buttons.pack(fill="x")
@@ -289,16 +292,14 @@ class MainWindow(tk.Tk):
         self.configure(bg=self.pal.ground)
         self.geometry("1600x950")
         self.minsize(1000, 660)
-        # Open maximised: eight live markets at a readable size need the room,
-        # and a window that opens too small to read is the first thing anyone
-        # notices.
-        try:
-            self.state("zoomed")
-        except Exception:
-            pass
+
 
         self._build_chrome()
         self._build_grid()
+        # Maximise AFTER the widgets exist. Doing it in the constructor, before
+        # anything is packed, leaves Windows with a full screen frame whose
+        # children were never laid out, which paints as a black rectangle.
+        self.after(60, self._maximise)
         self._apply_trading_state()
         # Only live sessions need the periodic check. In demo there is no order
         # to lose and no reason to keep a thread awake.
@@ -440,17 +441,23 @@ class MainWindow(tk.Tk):
                                    highlightthickness=1,
                                    highlightbackground=p.rule)
         self.fill_panel.pack(side="right")
-        tk.Label(self.fill_panel, text="FILLS", bg=p.panel, fg=p.accent,
-                 font=Font.label).pack(anchor="w", padx=Space.md,
-                                       pady=(Space.sm, 0))
+        self.fill_head = tk.Label(self.fill_panel, text="FILLS  0 / 2",
+                                  bg=p.panel, fg=p.accent, font=Font.label)
+        self.fill_head.pack(anchor="w", padx=Space.md, pady=(Space.sm, 0))
         self.fill_rows = []
         for _ in range(MAX_FILL_ROWS):
             row = tk.Label(self.fill_panel, text="", bg=p.panel, fg=p.text_dim,
                            font=Font.data_sm, anchor="w", justify="left")
             row.pack(anchor="w", padx=Space.md, pady=(0, 2))
             self.fill_rows.append(row)
-        self.fill_rows[0].configure(text="waiting for a fill")
+
         tk.Frame(self.fill_panel, bg=p.panel, height=Space.sm).pack()
+
+    def _maximise(self) -> None:
+        try:
+            self.state("zoomed")
+        except Exception:
+            pass
 
     def _visible_codes(self) -> list:
         codes = [i.display for i in self.session.market_data.instruments()]
@@ -587,6 +594,8 @@ class MainWindow(tk.Tk):
             return
 
         p = self.pal
+        self.fill_head.configure(
+            text=f"FILLS  {min(len(fills), MAX_FILL_ROWS)} / {MAX_FILL_ROWS}")
         for index, row in enumerate(self.fill_rows):
             if index >= len(fills):
                 row.configure(text="")

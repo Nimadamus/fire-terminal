@@ -249,3 +249,99 @@ def test_a_bad_address_is_refused(service):
     client, _, _, _ = service
     for junk in ("", "nope", "a@b", "x" * 400 + "@example.com"):
         assert client.post("/waitlist", json={"email": junk}).status_code == 400
+
+
+# -- device handling -------------------------------------------------------
+def test_a_customer_can_see_their_own_computers(service):
+    client, store_mod, licence_mod, _ = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "who@example.com", "FIRE Monthly",
+                             time.time() + 86400, "cus_x", "sub_x")
+    client.post("/activate", json={"key": key, "install": "aaaaaaaabbbbbbbb"})
+
+    body = client.get("/licence/state", params={"key": key}).json()
+    assert body["seats_used"] == 1 and body["seats"] == 3
+    assert body["computers"][0]["id"] == "aaaaaaaa"
+    assert body["computers"][0]["handle"] == "aaaaaaaabbbbbbbb"
+    # A key found written down must not become a way to read the account.
+    assert "who@example.com" not in str(body)
+    assert "cus_x" not in str(body)
+
+
+def test_replacing_a_laptop_does_not_need_a_support_ticket(service):
+    client, store_mod, licence_mod, _ = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE Monthly", time.time() + 86400,
+                             seats=2)
+    client.post("/activate", json={"key": key, "install": "old-machine-1111"})
+    client.post("/activate", json={"key": key, "install": "old-machine-2222"})
+    assert client.post("/activate", json={"key": key, "install": "new"}).status_code == 409
+
+    # An ambiguous prefix must say so, not claim the computer does not exist.
+    freed = client.post("/licence/release", json={"key": key, "install": "old-mach"})
+    assert freed.status_code == 409, "an ambiguous prefix must not free a seat"
+    assert "more than one" in freed.json()["detail"].lower()
+
+    freed = client.post("/licence/release",
+                        json={"key": key, "install": "old-machine-1111"})
+    assert freed.status_code == 200 and freed.json()["seats_used"] == 1
+    assert client.post("/activate", json={"key": key, "install": "new"}).status_code == 200
+
+
+def test_releasing_a_computer_that_is_not_there_says_so(service):
+    client, store_mod, licence_mod, _ = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE Monthly", time.time() + 86400)
+    assert client.post("/licence/release",
+                       json={"key": key, "install": "never"}).status_code == 404
+
+
+def test_an_unknown_key_reveals_nothing(service):
+    client, _, _, _ = service
+    assert client.get("/licence/state",
+                      params={"key": "FIRE-ZZZZZ-ZZZZZ-ZZZZZ-ZZZZZ"}).status_code == 404
+
+
+# -- the website, served by the same process -------------------------------
+def test_the_site_is_served_from_the_same_origin(service):
+    """One thing to deploy, one domain, no CORS, no second hosting account."""
+    client, _, _, _ = service
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "FIRE" in r.text
+    assert "text/html" in r.headers["content-type"]
+
+
+def test_clean_urls_resolve(service):
+    client, _, _, _ = service
+    for path in ("/welcome", "/account", "/legal/risk", "/legal/terms"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_static_assets_are_served(service):
+    client, _, _, _ = service
+    assert client.get("/style.css").status_code == 200
+    assert client.get("/img/terminal.png").status_code == 200
+
+
+def test_the_api_routes_win_over_the_site(service):
+    """A file called health.html must never shadow the health endpoint."""
+    client, _, _, _ = service
+    body = client.get("/health").json()
+    assert body["ok"] is True
+
+
+def test_a_path_cannot_escape_the_site_directory(service):
+    client, _, _, _ = service
+    for attack in ("/../server/app.py", "/..%2f..%2fserver/licences.py",
+                   "/../../CREDENTIALS.md"):
+        r = client.get(attack)
+        assert r.status_code == 404 or "STRIPE" not in r.text, attack
+
+
+def test_the_support_page_and_404_are_served(service):
+    client, _, _, _ = service
+    assert client.get("/support").status_code == 200
+    missing = client.get("/no-such-page")
+    assert missing.status_code == 404
+    assert "not here" in missing.text

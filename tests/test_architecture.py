@@ -139,5 +139,19 @@ def test_the_service_embeds_no_secrets(path: pathlib.Path):
     """Signing keys and Stripe keys come from the environment, never source."""
     text = path.read_text(encoding="utf-8")
     assert "-----BEGIN" not in text, f"{path} contains a PEM block"
+    # setup_stripe.py has to name the test key prefix to tell test mode from
+    # live mode, which is exactly the check that stops somebody creating live
+    # products by accident. Same narrow exemption as redact.py for PEM blocks.
+    if path.name == "setup_stripe.py":
+        return
     for marker in ("sk_live_", "sk_test_", "whsec_", "rk_live_"):
         assert marker not in text, f"{path} contains a Stripe key"
+
+
+def test_the_stripe_setup_exemption_is_narrow():
+    """The exemption covers a prefix check, not an actual key."""
+    text = (SERVER / "setup_stripe.py").read_text(encoding="utf-8")
+    import re
+    # A real key is the prefix followed by a long random body.
+    assert not re.search(r"sk_(live|test)_[A-Za-z0-9]{16,}", text)
+    assert not re.search(r"whsec_[A-Za-z0-9]{16,}", text)

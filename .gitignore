@@ -17,3 +17,4 @@ SHARED_ACCOUNT_STATE/
 fire_stdio.log
 dist/
 build/
+packaging/fire_version_info.txt

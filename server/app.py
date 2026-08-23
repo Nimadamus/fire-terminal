@@ -21,10 +21,11 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 import licences
@@ -287,6 +288,73 @@ def _on_payment_failed(invoice: Any) -> None:
                  record["key"])
 
 
+class ReleaseIn(BaseModel):
+    key: str
+    install: str
+
+
+@app.get("/licence/state")
+def licence_state(key: str) -> dict[str, Any]:
+    """What a customer can see about their own licence.
+
+    Deliberately returns no email address and no Stripe id. It is reachable
+    with only a licence key, so it must not hand anything back that would be
+    useful to somebody who found one written down.
+    """
+    record = store.licence(licences.normalise(key))
+    if record is None:
+        raise HTTPException(404, "We do not recognise that licence key.")
+    bound = store.installs_for(str(record["key"]))
+    return {
+        "status": record["status"],
+        "plan": record["plan"],
+        "expires": record["expires"],
+        "seats_used": len(bound),
+        "seats": record["seats"],
+        # Two fields on purpose. `id` is short and is what a person reads;
+        # `handle` is exact and is what the remove button sends back. Asking a
+        # customer to identify a machine by a truncated id only works while
+        # those truncations happen to be unique, which nothing guarantees.
+        "computers": [{"id": b["install"][:8], "handle": b["install"],
+                       "last_seen": b["last_seen"]} for b in bound],
+    }
+
+
+@app.post("/licence/release")
+def release(body: ReleaseIn) -> dict[str, Any]:
+    """Free a seat, so replacing a laptop is self service.
+
+    Without this, a customer who changes machines three times hits a wall and
+    has to email us, which is a support ticket generated entirely by our own
+    bookkeeping.
+    """
+    key = licences.normalise(body.key)
+    install = (body.install or "").strip()
+    if not key or not install:
+        raise HTTPException(400, "That licence key does not look right.")
+    if store.licence(key) is None:
+        raise HTTPException(404, "We do not recognise that licence key.")
+
+    # Exact first. A prefix is accepted as a convenience, but an ambiguous one
+    # is reported as ambiguous rather than as "not found", which would send a
+    # customer looking for a problem that is not there.
+    target = install
+    if not store.install_is_bound(install, key):
+        matches = [b["install"] for b in store.installs_for(key)
+                   if b["install"].startswith(install)]
+        if len(matches) > 1:
+            raise HTTPException(
+                409, "More than one computer starts with that. Use the full "
+                     "identifier shown on your account page.")
+        if not matches:
+            raise HTTPException(404, "That computer is not on this licence.")
+        target = matches[0]
+
+    if not store.release_install(target, key):
+        raise HTTPException(404, "That computer is not on this licence.")
+    return {"ok": True, "seats_used": len(store.installs_for(key))}
+
+
 # --------------------------------------------------------------------------
 # Pre launch
 # --------------------------------------------------------------------------
@@ -311,9 +379,70 @@ def waitlist(body: WaitlistIn) -> dict[str, Any]:
     return {"ok": True, "new": fresh}
 
 
+# --------------------------------------------------------------------------
+# The website
+# --------------------------------------------------------------------------
+# Serving the site from the same process as the API is a deliberate
+# simplification. It means one thing to deploy, one domain, no CORS, and no
+# second hosting account that can expire out from under us. If we ever want a
+# CDN in front, it goes in front of this without changing anything here.
+SITE_DIR = Path(os.environ.get("FIRE_SITE_DIR",
+                               Path(__file__).resolve().parents[1] / "site"))
+
+CLEAN_URLS = {
+    "": "index.html",
+    "welcome": "welcome.html",
+    "account": "account.html",
+    "support": "support.html",
+}
+
+
+def _site_file(path: str) -> Optional[Path]:
+    """Resolve a request path to a file inside the site directory, or None.
+
+    Every candidate is checked to be inside SITE_DIR after resolution, so a
+    path like ../../etc/passwd cannot escape.
+    """
+    trimmed = path.strip("/")
+    candidates = []
+    if trimmed in CLEAN_URLS:
+        candidates.append(SITE_DIR / CLEAN_URLS[trimmed])
+    else:
+        candidates.append(SITE_DIR / trimmed)
+        candidates.append(SITE_DIR / f"{trimmed}.html")
+        candidates.append(SITE_DIR / trimmed / "index.html")
+
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(SITE_DIR.resolve())
+        except (ValueError, OSError):
+            continue
+        if resolved.is_file():
+            return resolved
+    return None
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     ready = bool(os.environ.get("FIRE_SIGNING_KEY"))
     return {"ok": True, "signing_key": ready,
             "billing": bool(STRIPE_SECRET),
-            "webhooks": bool(STRIPE_WEBHOOK_SECRET)}
+            "webhooks": bool(STRIPE_WEBHOOK_SECRET),
+            "site": SITE_DIR.is_dir()}
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def site(full_path: str):
+    """Everything not claimed by an API route is the website.
+
+    Registered last on purpose: FastAPI matches in declaration order, so the
+    API routes above always win.
+    """
+    path = _site_file(full_path)
+    if path is None:
+        missing = _site_file("404")
+        if missing is not None:
+            return FileResponse(missing, status_code=404)
+        raise HTTPException(404, "Not found.")
+    return FileResponse(path)

@@ -224,3 +224,21 @@ def join_waitlist(email: str, note: str = "", source: str = "") -> bool:
 def waitlist_size() -> int:
     row = fetchone("SELECT COUNT(*) FROM waitlist", ())
     return int(row[0]) if row else 0
+
+
+def installs_for(key: str) -> list[dict]:
+    """Every machine bound to a licence, newest activity first."""
+    with _lock, connect() as conn:
+        cur = conn.cursor()
+        cur.execute(q("SELECT install, first_seen, last_seen FROM installs"
+                      " WHERE key = ? ORDER BY last_seen DESC"), (key,))
+        return [{"install": r[0], "first_seen": r[1], "last_seen": r[2]}
+                for r in cur.fetchall()]
+
+
+def release_install(install: str, key: str) -> bool:
+    """Unbind one machine. True if there was one to unbind."""
+    if not install_is_bound(install, key):
+        return False
+    execute("DELETE FROM installs WHERE install = ? AND key = ?", (install, key))
+    return True

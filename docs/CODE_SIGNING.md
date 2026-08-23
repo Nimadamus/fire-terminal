@@ -48,6 +48,21 @@ before during the preview period.
 
 Do **not** buy EV for launch. Revisit only if a specific customer requires it.
 
+## The short answer
+
+| | |
+|---|---|
+| **Provider** | Microsoft, Azure Artifact Signing (was called Trusted Signing) |
+| **Certificate type** | Public Trust, Individual identity validation |
+| **Price** | **$9.99 a month**, up to 5,000 signatures |
+| **Sign up here** | **https://portal.azure.com** then search the marketplace for **Trusted Signing Account**. Product page: https://azure.microsoft.com/en-us/products/artifact-signing. Step by step: https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart |
+| **They verify** | Government photo ID, and that you are in the United States or Canada. Individuals qualify; no company needed. |
+| **After you have it** | Send me the account name, the certificate profile name and the endpoint region. Three strings, nothing secret. |
+| **Fallback** | If individual onboarding is closed when you try, buy **Sectigo Individual Validation Code Signing, $219/year**, at https://www.sectigo.com/ssl-certificates-tls/code-signing or cheaper through a reseller such as https://www.ssldragon.com/ssl-certificates/code-signing/. It arrives on a USB token you must plug in to sign. |
+
+**Do not buy EV.** It costs two to three times more and, since March 2024, buys
+nothing extra for SmartScreen.
+
 ## What you have to do
 
 1. Sign up for Azure Artifact Signing and complete identity validation. Expect

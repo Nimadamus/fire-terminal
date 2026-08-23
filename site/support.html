@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIRE support</title>
+<meta name="description" content="Installing FIRE, connecting an exchange account, rotating an API key, subscription problems, updating, reinstalling and uninstalling.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 56px;
+            align-items: start; }
+  .toc { position: sticky; top: 86px; }
+  .toc ul { list-style: none; padding: 0; margin: 0; }
+  .toc li { margin-bottom: 9px; }
+  .toc a { color: var(--text-faint); font-size: 14.5px; }
+  .toc a:hover { color: var(--text); text-decoration: none; }
+  .toc .grouphead { font-family: var(--mono); font-size: 11px;
+                    letter-spacing: 0.16em; text-transform: uppercase;
+                    color: var(--accent); margin: 22px 0 10px; }
+  .toc .grouphead:first-child { margin-top: 0; }
+  article h2 { margin-top: 56px; scroll-margin-top: 86px; }
+  article h2:first-of-type { margin-top: 0; }
+  article h3 { margin-top: 30px; font-size: 17px; }
+  article p, article li { color: var(--text-dim); }
+  article ol, article ul { max-width: 72ch; padding-left: 22px; }
+  article li { margin-bottom: 9px; }
+  article p { max-width: 72ch; }
+  .steps-note { border-left: 3px solid var(--rule); padding: 4px 0 4px 18px;
+                margin: 20px 0; color: var(--text-faint); font-size: 15px; }
+  .danger { border-left-color: var(--no); color: var(--text-dim); }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 32px; }
+    .toc { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo">FI<span>RE</span></div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/account">Account</a>
+    </nav>
+  </div>
+</header>
+
+<section style="padding-top:56px">
+  <div class="wrap">
+    <div class="eyebrow">Support</div>
+    <h1 style="font-size:40px">How to do everything</h1>
+    <p class="lede">
+      If none of this covers it, open <strong>Diagnostics</strong> in FIRE,
+      create a support bundle and send it to us. The bundle contains no
+      credentials and it usually settles a problem in one message instead of
+      ten. We reply within one business day.
+    </p>
+    <p style="margin-top:20px">
+      <a class="btn btn-primary" href="mailto:SUPPORT_EMAIL" data-show-address="1">Email support</a>
+    </p>
+  </div>
+</section>
+
+<section style="padding-top:20px; border-bottom:0">
+  <div class="wrap layout">
+
+    <nav class="toc">
+      <div class="grouphead">Getting started</div>
+      <ul>
+        <li><a href="#install">Installing FIRE</a></li>
+        <li><a href="#first-run">Your first run</a></li>
+        <li><a href="#activate">Entering your licence key</a></li>
+        <li><a href="#credentials">Connecting your exchange</a></li>
+        <li><a href="#first-order">Your first live order</a></li>
+      </ul>
+      <div class="grouphead">Everyday</div>
+      <ul>
+        <li><a href="#updating">Updating</a></li>
+        <li><a href="#reinstall">Reinstalling</a></li>
+        <li><a href="#computers">Changing computer</a></li>
+        <li><a href="#uninstall">Uninstalling</a></li>
+      </ul>
+      <div class="grouphead">When something is wrong</div>
+      <ul>
+        <li><a href="#trouble">Common problems</a></li>
+        <li><a href="#subscription">Subscription problems</a></li>
+      </ul>
+      <div class="grouphead">Security</div>
+      <ul>
+        <li><a href="#rotate">Rotating your API key</a></li>
+        <li><a href="#stolen">Lost or stolen computer</a></li>
+      </ul>
+    </nav>
+
+    <article>
+
+      <!-- ============================================================ -->
+      <h2 id="install">Installing FIRE</h2>
+      <p>
+        FIRE is a single Windows installer. There is nothing else to install:
+        no Python, no command line, no accounts to create anywhere except with
+        your exchange.
+      </p>
+      <ol>
+        <li>Download the installer from the link in your welcome email or on
+            the download page.</li>
+        <li>Run it. It does not ask for administrator rights and installs for
+            your Windows account only.</li>
+        <li>Windows may show a blue box saying it protected your PC. Choose
+            <strong>More info</strong>, then <strong>Run anyway</strong>. This
+            appears for any installer Windows has not seen many times before.</li>
+        <li>Click through the installer. It takes a few seconds.</li>
+      </ol>
+      <p><strong>Requirements.</strong> Windows 10 or Windows 11. About 60 MB of
+      disk. An internet connection.</p>
+
+      <!-- ============================================================ -->
+      <h2 id="first-run">Your first run</h2>
+      <p>
+        FIRE opens on a setup screen and asks how you want to start. You can
+        change your mind later, so pick whichever suits you.
+      </p>
+      <ul>
+        <li><strong>Try it first</strong> puts you in demo mode. Simulated
+            markets, a simulated balance, no exchange account and no money.</li>
+        <li><strong>Connect my exchange account</strong> takes you through the
+            risk acknowledgements and then asks for your API key.</li>
+      </ul>
+      <p>
+        We suggest demo first even if you intend to trade immediately. It costs
+        nothing and it is the cheapest place to learn where the buttons are.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="activate">Entering your licence key</h2>
+      <ol>
+        <li>Open FIRE.</li>
+        <li>Click <strong>Account</strong> at the top right.</li>
+        <li>Paste your key into the licence box and click
+            <strong>Apply licence</strong>.</li>
+      </ol>
+      <p>
+        That is the whole of activation. There is no account to create and no
+        password to remember. If it does not take, see
+        <a href="#subscription">subscription problems</a> below.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="credentials">Connecting your exchange account</h2>
+      <p>
+        FIRE trades through an API key that <em>you</em> create in
+        <em>your own</em> exchange account. We never see it.
+      </p>
+      <ol>
+        <li>Sign in to your exchange and find its API key settings.</li>
+        <li>Create a new key. Download the private key file it gives you. Most
+            exchanges show this once and never again, so save it somewhere
+            safe.</li>
+        <li>In FIRE, open <strong>Preferences</strong> and enter the key ID and
+            the private key.</li>
+        <li>Paste the private key <em>whole</em>, including its first and last
+            lines. It must not be password protected.</li>
+      </ol>
+      <div class="steps-note">
+        <strong>Create a key just for FIRE</strong> rather than reusing one you
+        already use elsewhere. If you ever need to revoke it, you then cut off
+        exactly one thing instead of everything at once.
+      </div>
+      <p>
+        FIRE encrypts the key immediately using Windows' own secret store,
+        which ties it to your Windows sign in. Only the encrypted form is
+        written to disk. Somebody who copies that file to another computer
+        cannot read it.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="first-order">Your first live order</h2>
+      <p>Before you click anything with real money behind it:</p>
+      <ol>
+        <li><strong>Check the banner.</strong> Blue and
+            <span class="mono">PAPER</span> means simulated. Red and
+            <span class="mono">LIVE</span> means real money and orders that are
+            final.</li>
+        <li><strong>Set your maximum loss per order</strong> in Preferences.
+            FIRE refuses any order whose worst case loss is larger than that
+            share of your balance.</li>
+        <li><strong>Leave the confirmation prompt on</strong> until you are
+            comfortable. It asks before every live order and shows the maximum
+            you can lose.</li>
+        <li>Start small. A binary contract settles at its full value or at
+            nothing, so the amount you pay is the amount you can lose.</li>
+      </ol>
+
+      <!-- ============================================================ -->
+      <h2 id="updating">Updating</h2>
+      <p>
+        When a new version is available, FIRE shows one line across the top with
+        a download button. It never interrupts you with a dialog.
+      </p>
+      <ol>
+        <li>Click <strong>Get the update</strong>. Your browser downloads the
+            new installer.</li>
+        <li>Close FIRE and run the installer.</li>
+        <li>It installs over the top. Your settings, your saved API key and
+            your subscription are all kept.</li>
+      </ol>
+      <p>There is no need to uninstall first, and nothing to migrate.</p>
+
+      <!-- ============================================================ -->
+      <h2 id="reinstall">Reinstalling</h2>
+      <p>
+        Download the current installer and run it. Installing over an existing
+        copy keeps everything. If you want a genuinely clean start, uninstall
+        first and answer <strong>Yes</strong> when it offers to remove your
+        settings, then install again and re-enter your licence key and API key.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="computers">Changing computer</h2>
+      <p>
+        Your subscription covers three computers. To move to a new one:
+      </p>
+      <ol>
+        <li>Go to <a href="/account">your account page</a> and enter your
+            licence key.</li>
+        <li>Find the old computer in the list and click
+            <strong>Remove</strong>. The seat is free immediately.</li>
+        <li>Install FIRE on the new computer and enter your licence key.</li>
+      </ol>
+      <p>
+        Removing a computer does not cancel anything, and it does not touch your
+        exchange account or your positions.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="uninstall">Uninstalling</h2>
+      <ol>
+        <li>Open Windows <strong>Settings</strong>, then
+            <strong>Apps</strong>.</li>
+        <li>Find <strong>FIRE</strong> and choose <strong>Uninstall</strong>.</li>
+        <li>It asks whether to also remove your settings and the encrypted copy
+            of your API key. Choose <strong>No</strong> to keep them for a later
+            reinstall, or <strong>Yes</strong> to remove them.</li>
+      </ol>
+      <div class="steps-note danger">
+        <strong>Uninstalling does not revoke your API key.</strong> The key
+        still exists and still works at your exchange. If you are uninstalling
+        because you think the key has been exposed, revoke it in your exchange
+        account as well. See <a href="#rotate">rotating your API key</a>.
+      </div>
+      <p>
+        Uninstalling also does not cancel your subscription. Do that from
+        <a href="/account">your account page</a>.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="trouble">Common problems</h2>
+
+      <h3>Windows warns about an unknown publisher</h3>
+      <p>
+        Choose <strong>More info</strong>, then <strong>Run anyway</strong>.
+        Windows shows this for any installer it has not seen many times before.
+      </p>
+
+      <h3>My balance is exactly one thousand dollars</h3>
+      <p>
+        You are in demo mode. Everything on screen is simulated. Connect your
+        exchange account in Preferences and reopen FIRE.
+      </p>
+
+      <h3>The BUY buttons are greyed out</h3>
+      <p>The card tells you which of three reasons applies:</p>
+      <ul>
+        <li><strong>Waiting for the next window.</strong> That market is between
+            windows and reopens on its own.</li>
+        <li><strong>Subscription ended.</strong> See
+            <a href="#subscription">below</a>.</li>
+        <li><strong>Trading is switched off.</strong> Access to this
+            installation was withdrawn. Send us a support bundle if that looks
+            wrong.</li>
+      </ul>
+
+      <h3>It says sign in required, or my credentials were rejected</h3>
+      <p>The exchange is not accepting your key. In order of likelihood:</p>
+      <ol>
+        <li>The key was revoked or has expired. Create a new one.</li>
+        <li>The private key was pasted incompletely. It must include the first
+            and last lines of the file.</li>
+        <li>The key file is password protected. FIRE cannot use an encrypted
+            key. Create one without a password.</li>
+      </ol>
+
+      <h3>An order did not fill</h3>
+      <p>
+        FIRE sends immediate or cancel orders. They fill against what is on the
+        book at that moment or they do not fill at all, and nothing rests.
+        Nothing was charged. The usual cause is that the price moved between the
+        book you looked at and the moment you clicked, or there were not enough
+        contracts at your limit. Both are normal in short duration markets.
+      </p>
+
+      <h3>Prices have stopped updating</h3>
+      <p>Check the connection indicator at the top right.</p>
+      <ul>
+        <li><strong>connecting</strong> or <strong>degraded</strong>: FIRE is
+            retrying by itself.</li>
+        <li><strong>rate limited</strong>: the exchange asked FIRE to slow down
+            and it has. Prices update less often until it clears.</li>
+        <li><strong>offline</strong>: check your internet connection.</li>
+      </ul>
+      <p>FIRE reconnects on its own in all of these. Restarting does not help.</p>
+
+      <!-- ============================================================ -->
+      <h2 id="subscription">Subscription problems</h2>
+
+      <h3>My licence key is not accepted</h3>
+      <ol>
+        <li>Check it against your receipt. Case and spacing do not matter, and
+            you can leave the dashes out.</li>
+        <li>If FIRE says the licence is in use on the maximum number of
+            computers, free one up on
+            <a href="/account">your account page</a>.</li>
+        <li>If it still fails, create a support bundle from Diagnostics and
+            email it to us with the address you bought with. Do not email the
+            key itself.</li>
+      </ol>
+
+      <h3>FIRE says it cannot confirm my subscription</h3>
+      <p>
+        Open <strong>Account</strong> and press <strong>Refresh</strong>. FIRE
+        keeps working for several days without being able to reach us, so this
+        means it has been offline for a while or something is wrong on our side.
+        If Refresh does not fix it, email us.
+      </p>
+
+      <h3>I cancelled. What happens to my positions?</h3>
+      <p>
+        Nothing. You keep access to the end of the period you have paid for,
+        then FIRE stops sending orders and tells you why. Anything you hold
+        stays open at your exchange, where you manage it as normal. Demo mode
+        keeps working.
+      </p>
+
+      <h3>My payment failed</h3>
+      <p>
+        Nothing happens immediately. Your card issuer and Stripe retry over
+        several days, and FIRE keeps working throughout. Update your card on
+        <a href="/account">your account page</a> and it resolves itself.
+      </p>
+
+      <!-- ============================================================ -->
+      <h2 id="rotate">Rotating your API key</h2>
+      <p>
+        Do this on whatever schedule you are comfortable with, and immediately
+        after anything that might have exposed the key. The order matters, so
+        you are never locked out mid window.
+      </p>
+      <ol>
+        <li>In your exchange account, create a <strong>new</strong> API key.
+            Leave the old one working for now.</li>
+        <li>In FIRE, open <strong>Preferences</strong>, choose
+            <strong>Remove saved credentials</strong>, then enter the new key
+            ID and private key.</li>
+        <li>Confirm the connection indicator reads <em>connected</em> and your
+            balance is right.</li>
+        <li>Only now, <strong>revoke the old key</strong> at your exchange.</li>
+      </ol>
+      <div class="steps-note danger">
+        Removing a key from FIRE does not revoke it at the exchange. Revocation
+        happens in your exchange account and nowhere else.
+      </div>
+
+      <!-- ============================================================ -->
+      <h2 id="stolen">Lost or stolen computer</h2>
+      <p>Do these in this order.</p>
+      <ol>
+        <li><strong>Revoke the API key at your exchange, first.</strong> Before
+            anything else. The copy on that computer is encrypted and tied to
+            that Windows sign in, but revoking removes the question entirely.</li>
+        <li><strong>Check your exchange account</strong> for orders or positions
+            you did not place.</li>
+        <li><strong>Remove that computer</strong> from
+            <a href="/account">your account page</a>, so the seat is free.</li>
+        <li><strong>Create a fresh API key</strong> for your replacement
+            machine.</li>
+      </ol>
+      <p>
+        We cannot revoke an exchange key for you. Only your exchange can do
+        that, and only you can ask them to.
+      </p>
+
+      <div class="callout" style="margin-top:44px">
+        <strong>We will never ask you for your private key.</strong> Not by
+        email, not in a support ticket, not on a screen share. Nobody needs it
+        to help you. Support bundles are safe to send: they are scrubbed of key
+        material before they are written, and FIRE discards any bundle it cannot
+        verify as clean.
+      </div>
+
+      <p style="margin-top:40px">
+        <a class="btn btn-ghost" href="mailto:SUPPORT_EMAIL" data-show-address="1">Email support</a>
+      </p>
+
+    </article>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disclaimer" style="border-top:0; margin-top:0">
+      <p><strong>Risk warning.</strong> Event contracts can settle at nothing.
+      You can lose the entire amount you pay for any contract, and no setting in
+      FIRE can prevent that once an order has filled.</p>
+      <p>
+        <a href="/legal/risk">Risk disclosure</a> ·
+        <a href="/legal/terms">Terms</a> ·
+        <a href="/legal/licence">Licence</a> ·
+        <a href="/legal/privacy">Privacy</a> ·
+        <a href="/legal/refunds">Refunds</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+</body>
+</html>

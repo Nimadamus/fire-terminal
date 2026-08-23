@@ -57,10 +57,15 @@ def resource(name: str):
     """
     candidates = []
     meipass = getattr(sys, "_MEIPASS", None)
-    if meipass:
-        candidates.append(Path(meipass) / "docs" / name)
     here = Path(__file__).resolve()
-    candidates.append(here.parents[3] / "docs" / name)     # <repo>/docs
+    if name.endswith((".ico", ".png")):
+        if meipass:
+            candidates.append(Path(meipass) / name)
+        candidates.append(here.parents[3] / "packaging" / name)
+    else:
+        if meipass:
+            candidates.append(Path(meipass) / "docs" / name)
+        candidates.append(here.parents[3] / "docs" / name)  # <repo>/docs
     for path in candidates:
         if path.is_file():
             return path

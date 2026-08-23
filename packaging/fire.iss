@@ -44,6 +44,7 @@ WizardStyle=modern
 UninstallDisplayName={#AppName} {#AppVersion}
 UninstallDisplayIcon={app}\{#AppExe}
 LicenseFile=..\docs\LICENSE.txt
+SetupIconFile=fire.ico
 SetupLogging=no
 
 [Languages]

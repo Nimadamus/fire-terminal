@@ -189,3 +189,13 @@ def test_version_and_release_names_line_up():
     from fire.version import VERSION
     assert VERSION.count(".") == 2
     assert not VERSION.endswith("-dev"), "a shipping build carries no suffix"
+
+
+def test_the_application_icon_ships_and_has_small_sizes():
+    """A 256px only icon is a blurry smear in the taskbar."""
+    from fire.config.paths import resource
+    path = resource("fire.ico")
+    assert path is not None, "the window and the exe both use this"
+    from PIL import Image
+    sizes = {s for s in Image.open(path).info.get("sizes", set())}
+    assert (16, 16) in sizes and (32, 32) in sizes and (256, 256) in sizes

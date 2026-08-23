@@ -6,6 +6,10 @@
  */
 window.FIRE_CONFIG = {
   // Base URL of the licence service, no trailing slash.
+  //
+  // Leave as "" when the service is serving this site itself, which is the
+  // default arrangement: same origin, no CORS, one thing to deploy. Set it to
+  // a full URL only if the site is hosted somewhere separate.
   api: "",
 
   // Flip to true only when payments are live AND the exchange has authorised
@@ -24,7 +28,7 @@ window.FIRE_CONFIG = {
   version: ""
 };
 
-window.FIRE_API = window.FIRE_CONFIG.api;
+window.FIRE_API = window.FIRE_CONFIG.api;   // "" means same origin
 
 document.addEventListener("DOMContentLoaded", function () {
   var c = window.FIRE_CONFIG;
@@ -52,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Before selling opens, the buy buttons come off entirely and the waitlist
   // takes their place. A button that silently fails is worse than one that is
   // honestly not there yet.
-  var open = Boolean(c.api) && c.selling === true;
+  var open = c.selling === true;
   var waitlist = document.getElementById("waitlist");
   if (!open) {
     document.querySelectorAll("[data-plan]").forEach(function (el) {

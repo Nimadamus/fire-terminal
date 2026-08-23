@@ -3,45 +3,92 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Manage your FIRE subscription</title>
+<title>Your FIRE account</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
+<style>
+  .field {
+    width: 100%; padding: 14px 16px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--rule);
+    color: var(--text); font-size: 17px; letter-spacing: 0.04em;
+    font-family: var(--mono);
+  }
+  .field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .state { background: var(--panel); border: 1px solid var(--rule);
+           border-radius: 12px; padding: 26px 28px; margin-top: 30px; }
+  .state dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 24px;
+              margin: 0; }
+  .state dt { color: var(--text-faint); font-family: var(--mono);
+              font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
+              align-self: center; }
+  .state dd { margin: 0; color: var(--text); }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 4px;
+          font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+          text-transform: uppercase; font-weight: 600; }
+  .pill-ok { background: rgba(46,160,67,.16); color: var(--yes); }
+  .pill-warn { background: rgba(240,136,62,.16); color: var(--accent); }
+  .pill-bad { background: rgba(214,69,80,.16); color: var(--no); }
+  .machine { display: flex; align-items: center; gap: 14px; padding: 12px 0;
+             border-bottom: 1px solid var(--rule); }
+  .machine:last-child { border-bottom: 0; }
+  .machine code { font-size: 14px; }
+  .machine .when { color: var(--text-faint); font-size: 14px; margin-left: auto; }
+</style>
 </head>
 <body>
 
 <header>
   <div class="wrap bar">
     <div class="logo">FI<span>RE</span></div>
-    <nav><a href="/">Home</a><a href="/#faq">FAQ</a></nav>
+    <nav><a href="/">Home</a><a href="/#faq">FAQ</a><a href="/support">Support</a></nav>
   </div>
 </header>
 
-<section style="padding-top:64px">
-  <div class="wrap" style="max-width:680px">
-    <div class="eyebrow">Your subscription</div>
-    <h1 style="font-size:38px">Manage your subscription</h1>
+<section style="padding-top:60px">
+  <div class="wrap" style="max-width:720px">
+    <div class="eyebrow">Your account</div>
+    <h1 style="font-size:38px">Subscription and computers</h1>
     <p class="lede">
-      Change your card, download invoices, or cancel. Enter the licence key you
-      use in FIRE and we will take you to the billing portal.
+      Enter the licence key you use in FIRE. You can check your subscription,
+      free up a computer, or open the billing portal to change your card or
+      cancel.
     </p>
 
-    <div style="margin-top:34px">
-      <label for="key" style="display:block; font-size:12px; letter-spacing:0.14em;
-             text-transform:uppercase; color:var(--text-faint); margin-bottom:8px">
-        Licence key
-      </label>
-      <input id="key" placeholder="FIRE-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off"
-             style="width:100%; padding:14px 16px; border-radius:8px;
-                    background:var(--panel); border:1px solid var(--rule);
-                    color:var(--text); font-size:17px; letter-spacing:0.04em;
-                    font-family:ui-monospace,Consolas,monospace">
-      <p style="margin-top:16px">
-        <button class="btn btn-primary" id="go">Open billing portal</button>
+    <div style="margin-top:32px">
+      <label for="key" style="display:block; font-family:var(--mono); font-size:11.5px;
+             letter-spacing:0.16em; text-transform:uppercase; color:var(--text-faint);
+             margin-bottom:9px">Licence key</label>
+      <input id="key" class="field" placeholder="FIRE-XXXXX-XXXXX-XXXXX-XXXXX"
+             autocomplete="off" spellcheck="false">
+      <p style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-primary" id="look">Look up my account</button>
+        <button class="btn btn-ghost" id="portal">Billing portal</button>
       </p>
       <p id="msg" style="color:var(--text-faint); font-size:15px; min-height:24px"></p>
+    </div>
+
+    <div class="state" id="state" hidden>
+      <dl>
+        <dt>Status</dt><dd id="s-status"></dd>
+        <dt>Plan</dt><dd id="s-plan"></dd>
+        <dt id="s-when-label">Renews</dt><dd id="s-when"></dd>
+        <dt>Computers</dt><dd id="s-seats"></dd>
+      </dl>
+
+      <hr style="border:0; border-top:1px solid var(--rule); margin:22px 0">
+      <div style="font-family:var(--mono); font-size:11.5px; letter-spacing:0.16em;
+                  text-transform:uppercase; color:var(--text-faint); margin-bottom:6px">
+        Where FIRE is installed
+      </div>
+      <div id="machines"></div>
+      <p style="color:var(--text-faint); font-size:14px; margin-top:16px">
+        Replacing a computer? Remove the old one here and the seat is free
+        immediately. Removing a computer does not cancel anything and does not
+        touch your exchange account.
+      </p>
     </div>
 
     <div class="callout" style="margin-top:30px">
@@ -54,31 +101,123 @@
     <p style="margin-top:30px; color:var(--text-faint); font-size:15px">
       Lost your key? <a href="mailto:SUPPORT_EMAIL" data-show-address="1">Email us</a>
       from the address you bought with and we will resend it. Never send a
-      licence key or an API key to anyone who asks for it.
+      licence key or an API key to anybody who asks you for it.
     </p>
   </div>
 </section>
 
 <script src="config.js"></script>
 <script>
-document.getElementById('go').addEventListener('click', function () {
-  var key = document.getElementById('key').value.trim();
+(function () {
   var msg = document.getElementById('msg');
-  if (!key) { msg.textContent = 'Enter the licence key you use in FIRE.'; return; }
-  msg.textContent = 'Looking that up...';
-  fetch(window.FIRE_API + '/portal?key=' + encodeURIComponent(key))
-    .then(function (r) {
-      if (r.status === 404) { throw new Error('unknown'); }
-      if (!r.ok) { throw new Error('unavailable'); }
-      return r.json();
-    })
-    .then(function (data) { window.location = data.url; })
-    .catch(function (err) {
-      msg.textContent = err.message === 'unknown'
-        ? 'We do not recognise that key. Check it against your receipt, or email support.'
-        : 'The billing portal is not reachable right now. Please try again shortly.';
+  var state = document.getElementById('state');
+
+  function key() { return document.getElementById('key').value.trim(); }
+
+  function say(text, tone) {
+    msg.textContent = text;
+    msg.style.color = tone || 'var(--text-faint)';
+  }
+
+  function when(epoch) {
+    if (!epoch) { return 'no end date'; }
+    return new Date(epoch * 1000).toLocaleDateString(undefined,
+      { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  var PILL = {
+    active: ['pill-ok', 'Active'],
+    trial: ['pill-ok', 'Trial'],
+    expired: ['pill-warn', 'Ended'],
+    revoked: ['pill-bad', 'Revoked']
+  };
+
+  function render(data) {
+    var pill = PILL[data.status] || ['pill-warn', data.status];
+    document.getElementById('s-status').innerHTML =
+      '<span class="pill ' + pill[0] + '">' + pill[1] + '</span>';
+    document.getElementById('s-plan').textContent = data.plan || 'FIRE';
+    document.getElementById('s-when-label').textContent =
+      data.status === 'active' ? 'Renews' : 'Ended';
+    document.getElementById('s-when').textContent = when(data.expires);
+    document.getElementById('s-seats').textContent =
+      data.seats_used + ' of ' + data.seats + ' in use';
+
+    var host = document.getElementById('machines');
+    host.textContent = '';
+    if (!data.computers.length) {
+      host.innerHTML = '<p style="color:var(--text-faint); margin:10px 0 0">'
+        + 'FIRE has not been activated on any computer yet.</p>';
+    }
+    data.computers.forEach(function (c) {
+      var row = document.createElement('div');
+      row.className = 'machine';
+      row.innerHTML = '<code>' + c.id + '</code>'
+        + '<span class="when">last used ' + when(c.last_seen) + '</span>';
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.textContent = 'Remove';
+      btn.onclick = function () {
+        btn.disabled = true;
+        btn.textContent = 'Removing...';
+        fetch(window.FIRE_API + '/licence/release', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: key(), install: c.handle })
+        }).then(function (r) {
+          if (!r.ok) { throw new Error('failed'); }
+          return look();
+        }).catch(function () {
+          btn.disabled = false;
+          btn.textContent = 'Remove';
+          say('That computer could not be removed. Please try again.', 'var(--no)');
+        });
+      };
+      row.appendChild(btn);
+      host.appendChild(row);
     });
-});
+    state.hidden = false;
+  }
+
+  function look() {
+    if (!key()) { say('Enter the licence key you use in FIRE.'); return; }
+    say('Looking that up...');
+    return fetch(window.FIRE_API + '/licence/state?key=' + encodeURIComponent(key()))
+      .then(function (r) {
+        if (r.status === 404) { throw new Error('unknown'); }
+        if (!r.ok) { throw new Error('unavailable'); }
+        return r.json();
+      })
+      .then(function (data) { say(''); render(data); })
+      .catch(function (err) {
+        state.hidden = true;
+        say(err.message === 'unknown'
+          ? 'We do not recognise that key. Check it against your receipt, or email support.'
+          : 'We could not reach the account service right now. Please try again shortly.',
+          'var(--no)');
+      });
+  }
+
+  document.getElementById('look').addEventListener('click', look);
+
+  document.getElementById('portal').addEventListener('click', function () {
+    if (!key()) { say('Enter the licence key you use in FIRE.'); return; }
+    say('Opening the billing portal...');
+    fetch(window.FIRE_API + '/portal?key=' + encodeURIComponent(key()))
+      .then(function (r) {
+        if (r.status === 404) { throw new Error('unknown'); }
+        if (!r.ok) { throw new Error('unavailable'); }
+        return r.json();
+      })
+      .then(function (data) { window.location = data.url; })
+      .catch(function (err) {
+        say(err.message === 'unknown'
+          ? 'We do not recognise that key. Check it against your receipt.'
+          : 'The billing portal is not reachable right now. Please try again shortly.',
+          'var(--no)');
+      });
+  });
+})();
 </script>
 </body>
 </html>

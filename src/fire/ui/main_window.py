@@ -24,6 +24,22 @@ from fire.version import VERSION
 REFRESH_MS = 400
 
 
+def _set_window_icon(window) -> None:
+    """Put the FIRE mark on the window and the taskbar button.
+
+    Never fatal: a missing or unreadable icon must not stop the terminal
+    opening, and on Linux tkinter refuses .ico outright.
+    """
+    from fire.config.paths import resource
+    path = resource("fire.ico")
+    if path is None:
+        return
+    try:
+        window.iconbitmap(default=str(path))
+    except Exception:
+        pass
+
+
 class CoinCard(Card):
     """One market. Everything the customer needs to act, nothing else."""
 
@@ -242,6 +258,7 @@ class MainWindow(tk.Tk):
         self._update_shown = False
 
         self.title(f"FIRE {VERSION}")
+        _set_window_icon(self)
         self.configure(bg=self.pal.ground)
         self.geometry("1400x900")
         self.minsize(920, 620)

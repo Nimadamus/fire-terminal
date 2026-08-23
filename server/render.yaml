@@ -10,6 +10,8 @@ services:
     rootDir: server
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    # One service serves the API and the website. One deploy, one domain, no
+    # CORS, and no second hosting account that can expire out from under us.
     healthCheckPath: /health
     envVars:
       - key: FIRE_SIGNING_KEY
@@ -24,6 +26,10 @@ services:
         sync: false
       - key: FIRE_SITE_URL
         sync: false
+      - key: FIRE_SITE_DIR
+        value: ../site
+      - key: PYTHONPATH
+        value: ../src
       - key: DATABASE_URL
         fromDatabase:
           name: fire-licences

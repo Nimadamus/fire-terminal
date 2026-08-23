@@ -57,6 +57,8 @@ class OnboardingWindow(tk.Tk):
         self._next_mode = VenueMode.DEMO
 
         self.title("Welcome to FIRE")
+        from fire.ui.main_window import _set_window_icon
+        _set_window_icon(self)
         self.configure(bg=self.pal.ground)
         self.geometry("680x620")
         self.resizable(False, False)

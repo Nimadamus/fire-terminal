@@ -69,7 +69,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 | E1 | Product name is "FIRE", not derived from any exchange mark | REQUIRED | **Done** |
 | E2 | No exchange logo, wordmark or colour in product or marketing | REQUIRED | **Done** |
 | E3 | Clear statement that FIRE is independent and unaffiliated | REQUIRED | **Drafted**; naming any exchange still gated on A4 |
-| E4 | Trademark search on "FIRE" for trading software | REQUIRED | Not started |
+| E4 | Trademark search on "FIRE" for trading software | REQUIRED | **Preliminary search done**, `docs/TRADEMARK.md`. Not blocked, but the bare word is weak: already registered by others in class 9 and swamped in finance by "Financial Independence Retire Early". Needs a real clearance opinion, same attorney conversation as F1. |
 
 ## F. Regulatory posture
 
@@ -93,7 +93,7 @@ scrutiny of the automated system, which is not what is being sold.
 | G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | **Shown in setup** before any live account connects; wording still needs legal review |
 | G3 | Privacy policy covering what FIRE stores and where | REQUIRED | **Drafted**, needs legal review |
 | G4 | Refund and cancellation terms | REQUIRED | **Drafted** (14 day full refund), needs legal review |
-| G5 | Support channel and response expectation | REQUIRED | Not started |
+| G5 | Support channel and response expectation | REQUIRED | **Policy written**, `docs/SUPPORT.md`, and the app tells the customer where to send a bundle from one constant. **The address itself is your decision**; the release gate blocks a beta or stable build while it is empty. |
 | G6 | Business entity in place before taking payment | REQUIRED | Not started |
 
 ## H. Product readiness

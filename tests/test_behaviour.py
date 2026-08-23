@@ -141,3 +141,23 @@ def test_the_key_security_guide_ships_and_is_findable():
 def test_a_missing_resource_returns_none_rather_than_raising():
     from fire.config.paths import resource
     assert resource("no-such-file-9f3a.md") is None
+
+
+def test_support_contact_is_one_line_or_empty():
+    from fire import version
+    assert version.support_contact() == ""      # unset on a dev build
+    version_email, version_url = version.SUPPORT_EMAIL, version.SUPPORT_URL
+    try:
+        version.SUPPORT_EMAIL, version.SUPPORT_URL = "help@example.com", ""
+        assert version.support_contact() == "help@example.com"
+        version.SUPPORT_URL = "https://example.com/support"
+        assert "or" in version.support_contact()
+    finally:
+        version.SUPPORT_EMAIL, version.SUPPORT_URL = version_email, version_url
+
+
+def test_a_dev_build_is_not_a_release_build():
+    """The release gate only enforces the finishing items on beta and stable."""
+    from fire import version
+    assert version.BUILD_CHANNEL == "dev"
+    assert not version.is_release_build()

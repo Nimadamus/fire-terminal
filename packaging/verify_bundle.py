@@ -117,6 +117,31 @@ def main(argv: list[str]) -> int:
     except Exception:
         pass
 
+    # 4b. things a dev build may leave unfinished and a release build may not
+    try:
+        from fire import version as ver
+        release = ver.is_release_build()
+    except Exception:
+        release = False
+    if release:
+        # A support bundle the customer cannot send anywhere is not support.
+        try:
+            if not ver.support_contact():
+                fail("release build has no support contact (fire/version.py)")
+        except Exception:
+            fail("release build could not resolve a support contact")
+        # Shipping a licence that still says DRAFT invites exactly the argument
+        # the licence exists to prevent.
+        repo_licence = Path(__file__).resolve().parents[1] / "docs" / "LICENSE.txt"
+        licences = list(root.glob("**/LICENSE.txt"))
+        if repo_licence.is_file():
+            licences.append(repo_licence)     # the installer shows this one
+        if not licences:
+            fail("release build has no licence text")
+        for licence in licences:
+            if b"DRAFT" in licence.read_bytes():
+                fail(f"licence still marked DRAFT: {licence.name}")
+
     # 5. entry point, and the guidance the app links to
     exe = list(root.glob("FIRE.exe")) + list(root.glob("FIRE"))
     if not exe:

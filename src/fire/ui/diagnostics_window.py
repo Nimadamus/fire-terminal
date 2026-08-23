@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 from fire.diagnostics import bundle
+from fire.version import support_contact
 from fire.ui.theme import Font, Space
 from fire.ui.widgets import FlatButton, hrule
 
@@ -78,9 +79,11 @@ class DiagnosticsWindow(tk.Toplevel):
             path = bundle.create(self.app.session, self.app.prefs,
                                  self.app.entitlement,
                                  note=self.note.get("1.0", "end").strip())
-            self.status.configure(
-                text=f"Saved to {path}. Attach it to your support email.",
-                fg=self.pal.good)
+            contact = support_contact()
+            where = (f"Send it to {contact}." if contact else
+                     "Attach it to your support request.")
+            self.status.configure(text=f"Saved to {path}. {where}",
+                                  fg=self.pal.good)
         except AssertionError:
             self.status.configure(
                 text="Bundle blocked: FIRE found something sensitive it could not "

@@ -258,11 +258,27 @@ and roughly 24 GB of research. None of it exists in this repository.
   it. Verified: silent install and uninstall round trip in 2.7 seconds,
   customer data correctly kept.
 
+**Build 7.** The finishing items that were still open.
+
+* **Preliminary name search** in `docs/TRADEMARK.md`. FIRE is not blocked, but
+  the bare word is weak: already registered by others in class 9, and in
+  finance the term is dominated by "Financial Independence Retire Early",
+  which costs us both distinctiveness and discoverability. Recommendation is
+  to ship v1 as FIRE, register nothing yet, and fold a real clearance opinion
+  into the same attorney conversation as the EULA review.
+* **Support policy** in `docs/SUPPORT.md`, and the app now tells the customer
+  where to send a bundle instead of referring vaguely to "your support email".
+  The address is one constant.
+* **The release gate now enforces the finishing items**, but only on beta and
+  stable builds, so a dev build stays workable. It blocks a release with no
+  support contact, and a release whose licence text still says DRAFT. Both
+  proven to block and then to pass.
+
 ## 8. Verified state
 
 ```
-232 tests passing, zero skipped
-Packaged FIRE.exe builds and launches (31.8 MB, 964 files)
+234 tests passing, zero skipped
+Packaged FIRE.exe builds and launches (31.8 MB, 965 files)
 Installer builds, installs, launches and uninstalls silently (11.7 MB)
 A lapsed subscription disables order entry before anyone can click
 A redeemed licence re-enables it without a restart

@@ -66,9 +66,8 @@ app = FastAPI(title="FIRE licence service", docs_url=None, redoc_url=None,
 def _stripe():
     if not STRIPE_SECRET:
         raise HTTPException(503, "Billing is not configured on this service.")
-    import stripe
-    stripe.api_key = STRIPE_SECRET
-    return stripe
+    from stripe_api import configure
+    return configure(STRIPE_SECRET)
 
 
 # --------------------------------------------------------------------------
@@ -194,11 +193,27 @@ def portal(key: str) -> dict[str, str]:
 # Stripe webhooks
 # --------------------------------------------------------------------------
 def _period_end(subscription: Any) -> Optional[float]:
-    value = None
-    if isinstance(subscription, dict):
-        value = subscription.get("current_period_end")
-    else:
-        value = getattr(subscription, "current_period_end", None)
+    """When the current paid period ends.
+
+    Stripe moved this field. On older API versions it sat on the subscription;
+    on the version we pin it lives on each subscription item, and reading only
+    the old place returns None, which quietly produces licences with no expiry
+    date at all. Both places are checked, item first.
+    """
+    def _get(obj, key):
+        if isinstance(obj, dict):
+            return obj.get(key)
+        return getattr(obj, key, None)
+
+    items = _get(subscription, "items") or {}
+    data = _get(items, "data") or []
+    ends = [_get(item, "current_period_end") for item in data]
+    ends = [float(e) for e in ends if e]
+    if ends:
+        # A subscription with several items ends when the last one does.
+        return max(ends)
+
+    value = _get(subscription, "current_period_end")
     return float(value) if value else None
 
 
@@ -207,8 +222,8 @@ async def stripe_webhook(request: Request,
                          background: BackgroundTasks) -> JSONResponse:
     if not STRIPE_WEBHOOK_SECRET:
         raise HTTPException(503, "Webhooks are not configured.")
-    import stripe
-    stripe.api_key = STRIPE_SECRET
+    from stripe_api import configure
+    stripe = configure(STRIPE_SECRET)
 
     payload = await request.body()
     signature = request.headers.get("stripe-signature", "")
@@ -284,10 +299,11 @@ def _enrich_from_subscription(key: str, sub_id: str) -> None:
     the next customer.subscription.updated event corrects it.
     """
     try:
-        import stripe as stripe_sdk
-        stripe_sdk.api_key = STRIPE_SECRET
-        subscription = stripe_sdk.Subscription.retrieve(
-            sub_id, timeout=STRIPE_TIMEOUT_S, max_network_retries=1)
+        from stripe_api import configure
+        stripe_sdk = configure(STRIPE_SECRET)
+        # No timeout kwarg here: it would be sent to Stripe as a parameter.
+        # The bound lives on the HTTP client, see server/stripe_api.py.
+        subscription = stripe_sdk.Subscription.retrieve(sub_id)
         interval = (subscription["items"]["data"][0]["price"]
                     ["recurring"]["interval"])
         store.set_plan(key, "FIRE Annual" if interval == "year" else "FIRE Monthly")
@@ -296,6 +312,16 @@ def _enrich_from_subscription(key: str, sub_id: str) -> None:
         log.warning("could not read subscription %s (%s); licence %s stands and "
                     "will be corrected by the next subscription event",
                     sub_id, type(exc).__name__, key[-4:])
+
+
+def _plan_name(subscription: Any) -> str:
+    """Monthly or annual, read from the subscription's own price."""
+    try:
+        items = subscription["items"]["data"]
+        interval = items[0]["price"]["recurring"]["interval"]
+        return "FIRE Annual" if interval == "year" else "FIRE Monthly"
+    except Exception:
+        return ""
 
 
 def _on_subscription_change(subscription: Any) -> None:
@@ -307,6 +333,14 @@ def _on_subscription_change(subscription: Any) -> None:
     # a subscription Stripe has given up on becomes an expiry here.
     status = "active" if state in ("active", "trialing", "past_due") else "expired"
     store.set_status(str(record["key"]), status, _period_end(subscription))
+
+    # Refresh the plan name from every subscription event, not only at
+    # purchase. The one off enrichment after checkout can fail, and when it
+    # does the plan should correct itself on the next event rather than stay
+    # wrong for the life of the subscription.
+    plan = _plan_name(subscription)
+    if plan and plan != record.get("plan"):
+        store.set_plan(str(record["key"]), plan)
 
 
 def _on_subscription_ended(subscription: Any) -> None:

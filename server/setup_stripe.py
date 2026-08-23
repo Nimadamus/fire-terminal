@@ -44,9 +44,18 @@ WEBHOOK_EVENTS = [
 ]
 
 
+def _d(obj) -> dict:
+    """Stripe resources are not dicts and raise on .get(). Convert once.
+
+    Same trap that produced a 500 in the webhook handler: everything from the
+    SDK looks dict shaped and is not.
+    """
+    return obj.to_dict() if hasattr(obj, "to_dict") else dict(obj)
+
+
 def _find_product(stripe):
     for product in stripe.Product.list(limit=100, active=True).auto_paging_iter():
-        if product.name == PRODUCT_NAME:
+        if _d(product).get("name") == PRODUCT_NAME:
             return product
     return None
 
@@ -54,8 +63,9 @@ def _find_product(stripe):
 def _find_price(stripe, product_id: str, amount: int, interval: str):
     for price in stripe.Price.list(product=product_id, limit=100,
                                    active=True).auto_paging_iter():
-        recurring = price.get("recurring") or {}
-        if price.unit_amount == amount and recurring.get("interval") == interval:
+        data = _d(price)
+        recurring = data.get("recurring") or {}
+        if data.get("unit_amount") == amount and recurring.get("interval") == interval:
             return price
     return None
 
@@ -73,11 +83,15 @@ def main() -> int:
         print("STRIPE_SECRET_KEY is not set.", file=sys.stderr)
         return 1
 
-    import stripe
-    stripe.api_key = key
+    from stripe_api import configure
+    stripe = configure(key)
 
-    account = stripe.Account.retrieve()
-    name = ((account.get("business_profile") or {}).get("name") or "").strip()
+    account = _d(stripe.Account.retrieve())
+    profile = account.get("business_profile") or {}
+    settings = account.get("settings") or {}
+    name = (profile.get("name")
+            or (settings.get("dashboard") or {}).get("display_name")
+            or "").strip()
     live = not key.startswith("sk_test_")
     print(f"account : {account.get('id')}  ({name or 'unnamed'})")
     print(f"mode    : {'LIVE' if live else 'test'}")
@@ -120,18 +134,19 @@ def main() -> int:
         print(f"created coupon  {coupon.id}  {COUPON_PERCENT}% off, forever")
 
     existing_codes = [c for c in stripe.PromotionCode.list(limit=100).auto_paging_iter()
-                      if c.code == "FOUNDING50"]
+                      if _d(c).get("code") == "FOUNDING50"]
     if existing_codes:
         print(f"found promo     {existing_codes[0].code}")
     else:
+        # The 2026 API takes a nested promotion object rather than a coupon id.
         promo = stripe.PromotionCode.create(
-            coupon=coupon.id, code="FOUNDING50",
-            max_redemptions=COUPON_REDEMPTIONS)
+            promotion={"type": "coupon", "coupon": coupon.id},
+            code="FOUNDING50", max_redemptions=COUPON_REDEMPTIONS)
         print(f"created promo   {promo.code}  {COUPON_REDEMPTIONS} redemptions")
 
     if args.webhook:
         endpoints = [e for e in stripe.WebhookEndpoint.list(limit=100).auto_paging_iter()
-                     if e.url == args.webhook]
+                     if _d(e).get("url") == args.webhook]
         if endpoints:
             stripe.WebhookEndpoint.modify(endpoints[0].id,
                                           enabled_events=WEBHOOK_EVENTS)

@@ -461,3 +461,73 @@ def test_a_past_due_subscription_stays_active(service):
     assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
     after = client.post("/entitlement", json={"install": "unit-pastdue"})
     assert _payload(after.json()["token"], public, "unit-pastdue").status == "active"
+
+
+# -- the shapes Stripe actually sends --------------------------------------
+def test_the_renewal_date_is_read_from_the_subscription_item(service):
+    """Stripe moved current_period_end onto the item.
+
+    Reading only the old top level location returns None, and every licence is
+    then created with no expiry at all. That is what happened on the first real
+    purchase, and nothing in the suite noticed because the hand written payload
+    put the field where the old API had it.
+    """
+    import sys
+    sys.path.insert(0, str(SERVER))
+    import app as service_app
+
+    end = int(time.time()) + 30 * 86400
+    modern = {"id": "sub_modern", "status": "active",
+              "items": {"data": [{"current_period_end": end}]}}
+    assert service_app._period_end(modern) == float(end)
+
+    legacy = {"id": "sub_legacy", "status": "active", "current_period_end": end}
+    assert service_app._period_end(legacy) == float(end)
+
+    assert service_app._period_end({"id": "sub_none", "status": "active"}) is None
+
+    # Several items: the subscription is paid up until the last one ends.
+    multi = {"items": {"data": [{"current_period_end": end},
+                                {"current_period_end": end + 86400}]}}
+    assert service_app._period_end(multi) == float(end + 86400)
+
+
+def test_a_subscription_event_in_the_modern_shape_sets_an_expiry(service):
+    pytest.importorskip("stripe")
+    client, store_mod, licence_mod, public = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE", None, stripe_sub="sub_shape")
+    client.post("/activate", json={"key": key, "install": "unit-shape"})
+
+    end = int(time.time()) + 30 * 86400
+    body, headers = _signed({
+        "id": "evt_unit_shape",
+        "type": "customer.subscription.updated",
+        "data": {"object": {"id": "sub_shape", "status": "active",
+                            "items": {"data": [{"current_period_end": end}]}}},
+    })
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+
+    state = client.get("/licence/state", params={"key": key}).json()
+    assert state["expires"] == float(end), "a licence with no expiry never lapses"
+
+
+def test_the_plan_name_corrects_itself_on_a_later_event(service):
+    """The enrichment after checkout can fail. It must not stay wrong."""
+    pytest.importorskip("stripe")
+    client, store_mod, licence_mod, _ = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE", None, stripe_sub="sub_plan")
+    assert client.get("/licence/state", params={"key": key}).json()["plan"] == "FIRE"
+
+    end = int(time.time()) + 365 * 86400
+    body, headers = _signed({
+        "id": "evt_unit_plan",
+        "type": "customer.subscription.updated",
+        "data": {"object": {
+            "id": "sub_plan", "status": "active",
+            "items": {"data": [{"current_period_end": end,
+                                "price": {"recurring": {"interval": "year"}}}]}}},
+    })
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+    assert client.get("/licence/state", params={"key": key}).json()["plan"] == "FIRE Annual"

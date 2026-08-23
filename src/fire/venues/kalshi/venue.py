@@ -139,20 +139,24 @@ class LiveMarketData(MarketDataSource):
             time.sleep(self._p.book_poll_seconds
                        * (3.0 if self._t.degraded else 1.0))
 
-    # The exchange lists thousands of markets. FIRE is a short duration crypto
-    # terminal, so everything else is noise on the screen and load on the API.
-    SERIES_PREFIXES = ("KXBTC", "KXETH", "KXSOL", "KXXRP", "KXDOGE", "KXBNB",
-                       "KXHYPE", "KXNEAR", "KXADA", "KXBCH", "KXLTC", "KXAVAX")
-
-    def _wanted(self, raw: dict) -> bool:
-        ticker = str(raw.get("ticker") or "")
-        return any(ticker.startswith(p) for p in self.SERIES_PREFIXES)
+    # One call per coin. The unfiltered market list is thousands of rows and
+    # never reaches the fifteen minute crypto series at all, so asking for the
+    # series by name is both correct and far less traffic.
+    SERIES = ("KXBTC15M", "KXETH15M", "KXSOL15M", "KXXRP15M", "KXDOGE15M",
+              "KXBNB15M", "KXHYPE15M", "KXNEAR15M", "KXADA15M", "KXBCH15M",
+              "KXLTC15M", "KXAVAX15M")
 
     def _poll_once(self) -> None:
-        payload = self._t.get("markets")
-        found = [i for i in (_instrument(m) for m in payload.get("markets", [])
-                             if self._wanted(m))
-                 if i is not None]
+        found = []
+        for series in self.SERIES:
+            try:
+                payload = self._t.get("markets", series=series)
+            except Exception:
+                continue           # one coin missing must not blank the screen
+            for raw in payload.get("markets", []):
+                inst = _instrument(raw)
+                if inst is not None:
+                    found.append(inst)
         with self._lock:
             self._instruments = found
         for inst in found:

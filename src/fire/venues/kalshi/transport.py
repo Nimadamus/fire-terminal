@@ -58,7 +58,8 @@ class RateGate:
 class Transport:
     """One authenticated HTTP client against one endpoint profile."""
 
-    def __init__(self, profile: EndpointProfile, signer: RequestSigner) -> None:
+    def __init__(self, profile: EndpointProfile,
+                 signer: Optional[RequestSigner] = None) -> None:
         if not profile.configured:
             raise ExchangeNotConfigured(
                 "No approved exchange endpoint is configured in this build."
@@ -97,7 +98,12 @@ class Transport:
         for attempt in range(MAX_ATTEMPTS):
             self._gate.wait()
             try:
-                headers = self._signer.headers(method, signing_path)
+                # No signer means public endpoints only, which is what a
+                # viewer install has: markets and order books need no
+                # credential, and this machine deliberately holds none.
+                headers = (self._signer.headers(method, signing_path)
+                           if self._signer is not None
+                           else {"Content-Type": "application/json"})
                 response = self._session.request(
                     method, url, headers=headers, json=body,
                     timeout=REQUEST_TIMEOUT_S)

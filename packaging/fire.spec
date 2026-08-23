@@ -71,6 +71,10 @@ a = Analysis(
         'fire.ui.onboarding',
         'fire.ui.preferences_window',
         'fire.ui.diagnostics_window',
+        # Owner viewer path. Absent from a customer build's runtime
+        # anyway, because --view is never passed there.
+        'fire.venues.cloud.venue',
+        'winrm',
     ],
     hookspath=[],
     runtime_hooks=[],

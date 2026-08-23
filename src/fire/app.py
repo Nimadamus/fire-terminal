@@ -60,7 +60,13 @@ def build_session(mode: str) -> Session:
     entitlement = build_entitlement()
     if mode == VenueMode.LIVE:
         from fire.venues.kalshi.venue import build_live_venue
-        venue = build_live_venue(CredentialStore(), read_only=VIEW_ONLY)
+        if VIEW_ONLY:
+            # Viewer: public prices here, account through the cloud bridge.
+            # No credential is loaded on this machine at all.
+            from fire.venues.cloud.venue import build_view_venue
+            venue = build_view_venue()
+        else:
+            venue = build_live_venue(CredentialStore())
     else:
         venue = DemoVenue()
     return Session(venue, venue.mode, entitlement)

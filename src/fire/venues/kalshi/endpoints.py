@@ -74,7 +74,7 @@ OWNER_USE = EndpointProfile(
     base_url="https://api.elections.kalshi.com",
     api_root="/trade-api/v2",
     paths={
-        "markets":   "/markets?status=open&limit=1000",
+        "markets":   "/markets?series_ticker={series}&status=open",
         "market":    "/markets/{ticker}",
         "orderbook": "/markets/{ticker}/orderbook",
         "balance":   "/portfolio/balance",
@@ -83,10 +83,13 @@ OWNER_USE = EndpointProfile(
         "fills":     "/portfolio/fills",
     },
     configured=True,
-    max_requests_per_second=4.0,
-    market_poll_seconds=1.0,
-    book_poll_seconds=0.6,
-    account_poll_seconds=2.0,
+    # Twelve series plus a book each is a lot of calls per cycle, and the
+    # exchange says 429 well before it says anything useful. Paced to sit
+    # comfortably under that rather than to look fast.
+    max_requests_per_second=2.0,
+    market_poll_seconds=4.0,
+    book_poll_seconds=2.5,
+    account_poll_seconds=6.0,
 )
 
 # Switched on only by FIRE_OWNER_MODE=1 or the --owner flag, neither of which a

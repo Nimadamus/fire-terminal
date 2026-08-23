@@ -70,6 +70,47 @@ def _find_price(stripe, product_id: str, amount: int, interval: str):
     return None
 
 
+def _configure_portal(stripe, product_id: str, monthly: str, annual: str) -> None:
+    """The billing portal a customer reaches from /account.
+
+    Cancellation is at period end, never immediate. A customer who cancels has
+    already paid for the current period and should keep it; taking it away the
+    moment they click is the kind of thing that turns a quiet cancellation into
+    a chargeback.
+    """
+    features = {
+        "customer_update": {"enabled": True,
+                            "allowed_updates": ["email", "address", "tax_id"]},
+        "invoice_history": {"enabled": True},
+        "payment_method_update": {"enabled": True},
+        "subscription_cancel": {
+            "enabled": True, "mode": "at_period_end",
+            "cancellation_reason": {
+                "enabled": True,
+                "options": ["too_expensive", "missing_features",
+                            "switched_service", "unused", "other"]}},
+        "subscription_update": {
+            "enabled": True, "default_allowed_updates": ["price"],
+            "proration_behavior": "create_prorations",
+            "products": [{"product": product_id, "prices": [monthly, annual]}]},
+    }
+    business = {"headline": "FIRE subscription"}
+
+    existing = [c for c in stripe.billing_portal.Configuration.list(
+        limit=100).auto_paging_iter()
+        if (_d(c).get("metadata") or {}).get("product") == "FIRE"]
+
+    if existing:
+        cfg = stripe.billing_portal.Configuration.modify(
+            _d(existing[0])["id"], features=features, business_profile=business)
+        print(f"updated portal  {_d(cfg)['id']}  cancel at period end")
+    else:
+        cfg = stripe.billing_portal.Configuration.create(
+            features=features, business_profile=business,
+            metadata={"product": "FIRE"})
+        print(f"created portal  {_d(cfg)['id']}  cancel at period end")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--webhook", default="",
@@ -143,6 +184,9 @@ def main() -> int:
             promotion={"type": "coupon", "coupon": coupon.id},
             code="FOUNDING50", max_redemptions=COUPON_REDEMPTIONS)
         print(f"created promo   {promo.code}  {COUPON_REDEMPTIONS} redemptions")
+
+    _configure_portal(stripe, product.id,
+                      env["STRIPE_PRICE_MONTHLY"], env["STRIPE_PRICE_ANNUAL"])
 
     if args.webhook:
         endpoints = [e for e in stripe.WebhookEndpoint.list(limit=100).auto_paging_iter()

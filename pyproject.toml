@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fire-terminal"
+version = "1.0.0.dev0"
+description = "FIRE, a fast execution terminal for short duration binary markets"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+keyring = ["keyring>=24.0"]
+
+[project.scripts]
+fire = "fire.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

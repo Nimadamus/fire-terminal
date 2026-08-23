@@ -1,0 +1,17 @@
+﻿__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+
+# never let internal material into this repo
+*.pem
+credentials.dat
+kalshi_key*.json
+MODEL_REGISTRY/
+SHARED_ACCOUNT_STATE/
+*.jsonl
+fire_stdio.log

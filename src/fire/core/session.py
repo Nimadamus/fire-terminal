@@ -48,6 +48,11 @@ class Session:
         return self._mode == VenueMode.LIVE
 
     @property
+    def read_only(self) -> bool:
+        """A viewer install: real account, no order path."""
+        return bool(getattr(self._venue, "read_only", False))
+
+    @property
     def venue_name(self) -> str:
         return self._venue.display_name
 

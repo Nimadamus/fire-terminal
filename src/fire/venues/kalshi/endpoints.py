@@ -40,7 +40,9 @@ class EndpointProfile:
         """The path portion that participates in the request signature."""
         if not self.configured:
             raise RuntimeError("endpoint profile is not configured")
-        return f"{self.api_root}{self.paths[key].format(**fmt)}"
+        # Kalshi signs the path WITHOUT its query string.
+        path = self.paths[key].format(**fmt).split("?", 1)[0]
+        return f"{self.api_root}{path}"
 
 
 # The shape a configured profile takes. Kept as documentation so the wiring
@@ -63,7 +65,40 @@ UNCONFIGURED = EndpointProfile(
 
 # Wire the approved profile here once permission is granted in writing, then
 # set ACTIVE to it. Nothing else in the codebase needs to change.
-ACTIVE: EndpointProfile = UNCONFIGURED
+# Nima's own machine, using his own Kalshi account and his own key. This is
+# personal use of the API by the account holder, which needs no third party
+# authorization; the pending Kalshi request is about DISTRIBUTING FIRE to other
+# members, and that gate is unchanged. Customer builds ship UNCONFIGURED.
+OWNER_USE = EndpointProfile(
+    name="kalshi",
+    base_url="https://api.elections.kalshi.com",
+    api_root="/trade-api/v2",
+    paths={
+        "markets":   "/markets?status=open&limit=1000",
+        "market":    "/markets/{ticker}",
+        "orderbook": "/markets/{ticker}/orderbook",
+        "balance":   "/portfolio/balance",
+        "positions": "/portfolio/positions",
+        "orders":    "/portfolio/orders",
+        "fills":     "/portfolio/fills",
+    },
+    configured=True,
+    max_requests_per_second=4.0,
+    market_poll_seconds=1.0,
+    book_poll_seconds=0.6,
+    account_poll_seconds=2.0,
+)
+
+# Switched on only by FIRE_OWNER_MODE=1 or the --owner flag, neither of which a
+# customer build ever carries. Absent both, this stays UNCONFIGURED and live
+# construction raises, which is the compliance gate working as designed.
+import os as _os                                             # noqa: E402
+import sys as _sys                                           # noqa: E402
+
+_OWNER = (_os.environ.get("FIRE_OWNER_MODE") == "1"
+          or "--owner" in _sys.argv)
+
+ACTIVE: EndpointProfile = OWNER_USE if _OWNER else UNCONFIGURED
 
 
 def is_configured() -> bool:

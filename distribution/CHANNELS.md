@@ -20,6 +20,19 @@ included. Two mitigations exist and both are Nima's call, not mine:
 - **Wait for the written answer.** The request is drafted at
   `docs/KALSHI_AUTHORIZATION_REQUEST.md` and has not been sent.
 
+## What the live site already establishes (checked 2026-08-23)
+
+https://fire-terminal.onrender.com is up and **names no exchange anywhere**. It
+says outright that FIRE "goes on sale once the exchange authorisation we have
+asked for comes back in writing", and collects a waitlist instead of payment.
+That posture is already public, so an exchange-neutral pre-launch listing that
+points at that site publishes nothing the site does not already say. It does not
+clear A1, and the moment a listing names the exchange, or the site does, A4
+applies again.
+
+Practical consequence: the exchange-neutral rows below are gated on the domain
+and on account creation, **not** on Kalshi. The named rows stay gated on Kalshi.
+
 ## Legend
 
 - **POST NOW** publishable today without touching the gate
@@ -43,7 +56,7 @@ included. Two mitigations exist and both are Nima's call, not mine:
 | SourceForge | sourceforge.net | AFTER SITE | free | none | none | yes | none | - | accepts commercial Windows software |
 | Slant | slant.co | AFTER SITE | free | none | community | yes | none | - | answer "best prediction market tools" |
 | Uneed / Peerlist / Launching Next | various | AFTER SITE | free, some paid boosts | none | light | yes | none | - | low effort, low return, batch them |
-| r/Kalshi | reddit.com/r/Kalshi | AFTER KALSHI | free | none | subreddit rules | varies | betlegend (existing) | - | read rules; this is the highest-intent audience and the highest A4 exposure |
+| r/Kalshi | reddit.com/r/Kalshi | AFTER KALSHI | free | none | rule 'No Spam': no repetitive promotional content, no referral links | mod discretion | betlegend (existing) | - | rules read 2026-08-23. One genuine post at most, never a campaign. The subreddit name itself references the exchange, so A4 applies |
 | r/predictionmarkets | reddit.com/r/predictionmarkets | AFTER KALSHI | free | none | subreddit rules | varies | betlegend | - | same |
 | r/SideProject | reddit.com/r/SideProject | AFTER SITE | free | none | promo allowed | yes | betlegend | - | exchange-neutral framing works here |
 | r/algotrading | reddit.com/r/algotrading | REJECT | - | - | - | - | - | - | self-promotion of paid tools is not welcome; posting there burns the account |

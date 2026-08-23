@@ -26,7 +26,7 @@ import time
 from typing import Optional, Sequence
 
 from fire.config.credentials import CredentialStore
-from fire.core.errors import ExchangeNotConfigured, OrderRejected
+from fire.core.errors import TradingDisabled, ExchangeNotConfigured, OrderRejected
 from fire.core.models import (
     AccountSnapshot, Book, BookLevel, ConnectionState, Fill, IndexQuote,
     Instrument, OrderRequest, OrderResult, OrderState, Position, Side,
@@ -139,9 +139,19 @@ class LiveMarketData(MarketDataSource):
             time.sleep(self._p.book_poll_seconds
                        * (3.0 if self._t.degraded else 1.0))
 
+    # The exchange lists thousands of markets. FIRE is a short duration crypto
+    # terminal, so everything else is noise on the screen and load on the API.
+    SERIES_PREFIXES = ("KXBTC", "KXETH", "KXSOL", "KXXRP", "KXDOGE", "KXBNB",
+                       "KXHYPE", "KXNEAR", "KXADA", "KXBCH", "KXLTC", "KXAVAX")
+
+    def _wanted(self, raw: dict) -> bool:
+        ticker = str(raw.get("ticker") or "")
+        return any(ticker.startswith(p) for p in self.SERIES_PREFIXES)
+
     def _poll_once(self) -> None:
         payload = self._t.get("markets")
-        found = [i for i in (_instrument(m) for m in payload.get("markets", []))
+        found = [i for i in (_instrument(m) for m in payload.get("markets", [])
+                             if self._wanted(m))
                  if i is not None]
         with self._lock:
             self._instruments = found
@@ -311,9 +321,42 @@ class LiveVenue(Venue):
                        * (3.0 if self._t.degraded else 1.0))
 
 
-def build_live_venue(store: CredentialStore) -> Venue:
-    """Credential injection happens here and nowhere else."""
+def build_live_venue(store: CredentialStore, read_only: bool = False) -> Venue:
+    """Credential injection happens here and nowhere else.
+
+    `read_only` produces a viewer: real balance, positions, fills and prices,
+    with the order path removed rather than merely hidden.
+    """
     if not endpoints.is_configured():
         raise ExchangeNotConfigured(
             "Live trading is not enabled in this build.")
-    return LiveVenue(signer_from_store(store))
+    venue = LiveVenue(signer_from_store(store))
+    if read_only:
+        venue.execution = ReadOnlyExecution(venue.execution)
+        venue.read_only = True
+    return venue
+
+
+class ReadOnlyExecution(ExecutionVenue):
+    """Wraps a live execution venue and removes the ability to trade.
+
+    Fails closed, and fails EARLY: `plan` and `submit` raise before a request
+    object exists, so nothing is signed and nothing is sent. Fill history still
+    works, because reading what happened is the whole point of a viewer.
+    """
+
+    def __init__(self, inner: ExecutionVenue) -> None:
+        self._inner = inner
+
+    @property
+    def mode(self) -> str:
+        return self._inner.mode
+
+    def plan(self, ticker: str, side, budget_dollars: float):
+        raise TradingDisabled("Order entry is disabled in live view mode.")
+
+    def submit(self, request):
+        raise TradingDisabled("Order entry is disabled in live view mode.")
+
+    def recent_fills(self, limit: int = 50):
+        return self._inner.recent_fills(limit)

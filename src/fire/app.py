@@ -38,6 +38,10 @@ def _setup_logging() -> None:
     logging.getLogger("fire").info("FIRE %s starting", VERSION)
 
 
+# Set by --view. A viewer install shows a real account and cannot trade.
+VIEW_ONLY = False
+
+
 def build_entitlement():
     """The licence service if this build has one, a local trial if not.
 
@@ -56,7 +60,7 @@ def build_session(mode: str) -> Session:
     entitlement = build_entitlement()
     if mode == VenueMode.LIVE:
         from fire.venues.kalshi.venue import build_live_venue
-        venue = build_live_venue(CredentialStore())
+        venue = build_live_venue(CredentialStore(), read_only=VIEW_ONLY)
     else:
         venue = DemoVenue()
     return Session(venue, venue.mode, entitlement)
@@ -111,9 +115,12 @@ def _run(mode: str, prefs) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     requested = None
+    global VIEW_ONLY
+    if "--view" in argv:
+        VIEW_ONLY = True
     if "--demo" in argv:
         requested = VenueMode.DEMO
-    elif "--live" in argv:
+    elif "--live" in argv or VIEW_ONLY:
         requested = VenueMode.LIVE
 
     _setup_logging()

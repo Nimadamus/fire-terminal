@@ -122,6 +122,21 @@ class CoinCard(Card):
                                    font=Font.data_sm, anchor="w")
         self.limit_note.pack(fill="x", pady=(Space.sm, Space.sm))
 
+        if self.app.session.read_only:
+            # Removed, not disabled. A viewer has no order path at all, and a
+            # greyed out BUY button invites someone to wonder why.
+            tk.Label(box, text="watching only", bg=p.panel, fg=p.accent,
+                     font=Font.label, anchor="w").pack(fill="x",
+                                                       pady=(Space.sm, 0))
+            hrule(box, p)
+            self.position = kv_row(box, p, "position", "flat")
+            self.status = tk.Label(box, text="", bg=p.panel, fg=p.text_faint,
+                                   font=Font.data_sm, anchor="w",
+                                   wraplength=CARD_W - 30, justify="left")
+            self.status.pack(fill="x", pady=(Space.xs, 0))
+            self.buy_yes = self.buy_no = None
+            return
+
         buttons = tk.Frame(box, bg=p.panel)
         buttons.pack(fill="x")
         self.buy_yes = FlatButton(buttons, "BUY YES", lambda: self._buy(Side.YES),
@@ -151,6 +166,8 @@ class CoinCard(Card):
         return v
 
     def set_trading_enabled(self, on: bool, reason: str = "") -> None:
+        if self.buy_yes is None:
+            return                      # viewer: there is nothing to enable
         self.buy_yes.set_enabled(on)
         self.buy_no.set_enabled(on)
         self.stake_entry.configure(state="normal" if on else "disabled")
@@ -160,6 +177,9 @@ class CoinCard(Card):
             self._say("")
 
     def _buy(self, side: Side) -> None:
+        if self.app.session.read_only:
+            self._say("This copy of FIRE is watching only.", self.pal.accent)
+            return
         # The buttons are already disabled, but a preset click or a stray key
         # binding must not find a second way in.
         if not self.app.trading_enabled:
@@ -256,6 +276,11 @@ class MainWindow(tk.Tk):
         # ever touched from the main thread.
         self._pending_update = None
         self._update_shown = False
+        # Fill notifications. Seeded on the first poll so opening FIRE does not
+        # fire a toast for every trade already on the account today.
+        self._seen_fills: set = set()
+        self._fills_seeded = False
+        self._next_fill_poll = 0.0
 
         self.title(f"FIRE {VERSION}")
         _set_window_icon(self)
@@ -285,8 +310,11 @@ class MainWindow(tk.Tk):
         tk.Label(inner, text="FIRE", bg=p.panel, fg=p.text,
                  font=Font.title).pack(side="left", pady=Space.md)
         is_demo = self.session.is_demo
-        Badge(inner, "DEMO" if is_demo else "LIVE", p,
-              p.demo if is_demo else p.live).pack(side="left", padx=Space.md)
+        view_only = self.session.read_only
+        Badge(inner,
+              "DEMO" if is_demo else ("LIVE  ·  READ ONLY" if view_only else "LIVE"),
+              p, p.demo if is_demo else (p.accent if view_only else p.live)
+              ).pack(side="left", padx=Space.md)
 
         right = tk.Frame(inner, bg=p.panel)
         right.pack(side="right")
@@ -323,11 +351,16 @@ class MainWindow(tk.Tk):
                  font=Font.label).pack(side="right", padx=(0, Space.sm))
 
         # mode banner
-        banner_bg = p.demo if is_demo else p.live
+        banner_bg = p.demo if is_demo else (p.accent if view_only else p.live)
+        if is_demo:
+            banner_text = "PAPER  ·  SIMULATED ACCOUNT  ·  NO REAL ORDERS"
+        elif view_only:
+            banner_text = "LIVE  ·  READ ONLY  ·  REAL ACCOUNT, NO ORDER ENTRY"
+        else:
+            banner_text = "LIVE  ·  REAL MONEY  ·  ORDERS ARE FINAL"
         self.banner = tk.Label(
             self,
-            text=("PAPER  ·  SIMULATED ACCOUNT  ·  NO REAL ORDERS" if is_demo
-                  else "LIVE  ·  REAL MONEY  ·  ORDERS ARE FINAL"),
+            text=banner_text,
             bg=banner_bg, fg="#FFFFFF", font=Font.label, pady=6)
         self.banner.pack(fill="x")
 
@@ -404,6 +437,7 @@ class MainWindow(tk.Tk):
             if self.watch and self.watch.take_transition():
                 self._apply_trading_state()
             self._show_update_if_any()
+            self._poll_fills(now)
         except FireError as exc:
             self.footer.configure(text=f"{exc.title}. {exc.remedy}",
                                   fg=self.pal.warn)
@@ -475,6 +509,41 @@ class MainWindow(tk.Tk):
             self.watch.take_transition()      # already handled here
         self._apply_trading_state()
         self._refresh_chrome()
+
+    # -- fill notifications -------------------------------------------------
+    def _poll_fills(self, now: float) -> None:
+        """Toast any fill we have not seen, including ones placed elsewhere.
+
+        Polled on its own slower clock than the price refresh, because this is
+        an account read and the exchange has better things to do than answer it
+        twice a second.
+        """
+        if now < self._next_fill_poll:
+            return
+        self._next_fill_poll = now + 3.0
+        try:
+            fills = list(self.session.recent_fills(limit=25))
+        except Exception:
+            return
+
+        fresh = []
+        for fill in fills:
+            marker = (fill.order_id or "", fill.ticker, fill.count,
+                      round(fill.price, 4), round(fill.epoch, 1))
+            if marker not in self._seen_fills:
+                self._seen_fills.add(marker)
+                fresh.append(fill)
+
+        if not self._fills_seeded:
+            self._fills_seeded = True      # first pass is history, not news
+            return
+
+        from fire.ui.toast import fill_toast
+        for fill in reversed(fresh[:4]):
+            try:
+                fill_toast(self, self.pal, fill)
+            except Exception:
+                pass
 
     # -- updates -----------------------------------------------------------
     def offer_update(self, release) -> None:

@@ -85,3 +85,15 @@ class DemoModeOnly(FireError):
     """Raised if anything ever tries to route a demo action to a live venue."""
     title = "Blocked: demo activity cannot reach a live account"
     remedy = "This is a safety stop. Nothing was sent. Please report it with a support bundle."
+
+
+class TradingDisabled(FireError):
+    """This installation is a viewer. It refuses before any request is built.
+
+    Not a permission error from the exchange: FIRE never gets that far. The
+    order path stops inside the application, so a read only install cannot
+    reach a trading endpoint even if the credential would have allowed it.
+    """
+    title = "This copy of FIRE cannot place orders"
+    remedy = ("It is running in live view mode, which is read only by design. "
+              "Trading happens elsewhere.")

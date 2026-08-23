@@ -199,3 +199,44 @@ def test_the_application_icon_ships_and_has_small_sizes():
     from PIL import Image
     sizes = {s for s in Image.open(path).info.get("sizes", set())}
     assert (16, 16) in sizes and (32, 32) in sizes and (256, 256) in sizes
+
+
+# -- live view, read only --------------------------------------------------
+def test_a_viewer_refuses_to_trade_before_any_request_is_built():
+    """Fail closed and fail early: nothing signed, nothing sent."""
+    from fire.core.errors import TradingDisabled
+    from fire.core.models import Side
+    from fire.venues.kalshi.venue import ReadOnlyExecution
+
+    class _Inner:
+        mode = "live"
+        planned = submitted = False
+
+        def plan(self, *a, **k):
+            self.planned = True
+
+        def submit(self, *a, **k):
+            self.submitted = True
+
+        def recent_fills(self, limit=50):
+            return ["a fill"]
+
+    inner = _Inner()
+    view = ReadOnlyExecution(inner)
+
+    with pytest.raises(TradingDisabled):
+        view.plan("KXBTC-X", Side.YES, 50.0)
+    with pytest.raises(TradingDisabled):
+        view.submit(object())
+
+    assert not inner.planned and not inner.submitted, "the wrapped venue was reached"
+    # Reading what already happened is the entire point of a viewer.
+    assert view.recent_fills() == ["a fill"]
+
+
+def test_the_viewer_error_says_trading_happens_elsewhere():
+    from fire.core.errors import TradingDisabled
+    shown = TradingDisabled("x").as_display()
+    assert "cannot place orders" in shown["title"].lower()
+    assert "read only" in shown["remedy"].lower()
+    assert "elsewhere" in shown["remedy"].lower()

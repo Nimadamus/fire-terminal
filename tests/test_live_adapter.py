@@ -19,7 +19,8 @@ from fire.venues.kalshi.auth import RequestSigner, signer_from_store
 from fire.venues.kalshi.endpoints import EndpointProfile, REQUIRED_PATH_KEYS
 from fire.venues.kalshi.transport import RateGate
 from fire.venues.kalshi.venue import (
-    LiveAccount, LiveExecution, LiveMarketData, LiveVenue, _levels, _instrument,
+    LiveAccount, LiveExecution, LiveMarketData, LiveVenue, _asks_from_bids,
+    _instrument,
 )
 
 
@@ -108,14 +109,22 @@ def test_signer_from_store_requires_setup():
 
 
 # -- wire translation ------------------------------------------------------
-def test_levels_convert_cents_to_dollars_and_sort():
-    levels = _levels([[45, 10], [99, 3], [70, 5]])
-    assert [lv.price for lv in levels] == [0.99, 0.70, 0.45]
-    assert levels[0].size == 3
+def test_asks_are_derived_from_the_opposite_bid_ladder():
+    """To buy YES you cross the NO bids, so a yes ask is one minus a no bid."""
+    levels = _asks_from_bids([["0.55", "10"], ["0.01", "3"], ["0.30", "5"]])
+    # Cheapest ask first, because that is the one a buyer takes.
+    assert [lv.price for lv in levels] == [0.45, 0.70, 0.99]
+    assert levels[0].size == 10
 
 
 def test_levels_survive_malformed_entries():
-    assert _levels([[50, 1], None, ["x", "y"], []]) == _levels([[50, 1]])
+    assert (_asks_from_bids([["0.50", "1"], None, ["x", "y"], []])
+            == _asks_from_bids([["0.50", "1"]]))
+
+
+def test_a_bid_of_zero_or_one_produces_no_tradeable_ask():
+    """1.00 and 0.00 would imply a free or worthless contract."""
+    assert _asks_from_bids([["1.00", "5"], ["0.00", "5"]]) == ()
 
 
 def test_instrument_translation():
@@ -156,7 +165,8 @@ class FakeData:
 
 def _book():
     from fire.core.models import Book
-    return Book(yes=_levels([[50, 100]]), no=_levels([[40, 100]]))
+    return Book(yes=_asks_from_bids([["0.50", "100"]]),
+                no=_asks_from_bids([["0.60", "100"]]))
 
 
 def test_live_order_is_always_immediate_or_cancel():

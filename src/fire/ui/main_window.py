@@ -22,6 +22,8 @@ from fire.ui.widgets import Badge, Card, FlatButton, american_odds, hrule, kv_ro
 from fire.version import VERSION
 
 REFRESH_MS = 400
+MAX_FILL_ROWS = 2
+FILL_POLL_SECONDS = 4.0
 
 
 def _set_window_icon(window) -> None:
@@ -424,9 +426,31 @@ class MainWindow(tk.Tk):
         for r in range((len(self.cards) + per_row - 1) // per_row):
             self.grid_host.rowconfigure(r, weight=1, minsize=CARD_H)
 
-        self.footer = tk.Label(self, text="", bg=p.ground, fg=p.text_faint,
+        # Bottom right: what we filled. Two at a time, because a third would
+        # push the newest one off a screen already full of markets, and the
+        # Activity window holds the rest.
+        strip = tk.Frame(self, bg=p.ground)
+        strip.pack(fill="x", padx=Space.lg, pady=(0, Space.sm))
+
+        self.footer = tk.Label(strip, text="", bg=p.ground, fg=p.text_faint,
                                font=Font.data_sm, anchor="w")
-        self.footer.pack(fill="x", padx=Space.lg, pady=(0, Space.sm))
+        self.footer.pack(side="left", fill="x", expand=True)
+
+        self.fill_panel = tk.Frame(strip, bg=p.panel,
+                                   highlightthickness=1,
+                                   highlightbackground=p.rule)
+        self.fill_panel.pack(side="right")
+        tk.Label(self.fill_panel, text="FILLS", bg=p.panel, fg=p.accent,
+                 font=Font.label).pack(anchor="w", padx=Space.md,
+                                       pady=(Space.sm, 0))
+        self.fill_rows = []
+        for _ in range(MAX_FILL_ROWS):
+            row = tk.Label(self.fill_panel, text="", bg=p.panel, fg=p.text_dim,
+                           font=Font.data_sm, anchor="w", justify="left")
+            row.pack(anchor="w", padx=Space.md, pady=(0, 2))
+            self.fill_rows.append(row)
+        self.fill_rows[0].configure(text="waiting for a fill")
+        tk.Frame(self.fill_panel, bg=p.panel, height=Space.sm).pack()
 
     def _visible_codes(self) -> list:
         codes = [i.display for i in self.session.market_data.instruments()]
@@ -474,6 +498,7 @@ class MainWindow(tk.Tk):
             if self.watch and self.watch.take_transition():
                 self._apply_trading_state()
             self._show_update_if_any()
+            self._refresh_fills(now)
         except FireError as exc:
             self.footer.configure(text=f"{exc.title}. {exc.remedy}",
                                   fg=self.pal.warn)
@@ -545,6 +570,36 @@ class MainWindow(tk.Tk):
             self.watch.take_transition()      # already handled here
         self._apply_trading_state()
         self._refresh_chrome()
+
+    # -- fills ---------------------------------------------------------------
+    def _refresh_fills(self, now: float) -> None:
+        """The two most recent fills: size, price, what it risked, what it pays.
+
+        Polled on its own slower clock than prices, because it is an account
+        read and nothing is gained by asking twice a second.
+        """
+        if now < self._next_fill_poll:
+            return
+        self._next_fill_poll = now + FILL_POLL_SECONDS
+        try:
+            fills = list(self.session.recent_fills(limit=MAX_FILL_ROWS))
+        except Exception:
+            return
+
+        p = self.pal
+        for index, row in enumerate(self.fill_rows):
+            if index >= len(fills):
+                row.configure(text="")
+                continue
+            fill = fills[index]
+            risked = fill.count * fill.price + fill.fee_dollars
+            pays = float(fill.count)          # a binary settles at one dollar
+            coin = fill.ticker.split("-")[0].replace("KX", "").replace("15M", "")
+            row.configure(
+                text=(f"{coin} {fill.side.value.upper()}  {fill.count} @ "
+                      f"{fill.price:.2f}   risk ${risked:,.2f}   "
+                      f"wins ${pays:,.2f}"),
+                fg=p.yes if fill.side.value == "yes" else p.no)
 
     # -- fill notifications -------------------------------------------------
     def _poll_fills(self, now: float) -> None:

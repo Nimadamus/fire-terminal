@@ -45,22 +45,32 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 # Wire format translation. One place, so a venue change never leaks upward.
 # --------------------------------------------------------------------------
-def _levels(raw: Optional[list]) -> tuple[BookLevel, ...]:
-    """[[price_cents, size], ...] to our dollar denominated levels."""
+def _asks_from_bids(bids: Optional[list]) -> tuple[BookLevel, ...]:
+    """Turn the opposite side's bid ladder into asks for this side.
+
+    Kalshi publishes two bid ladders, `yes_dollars` and `no_dollars`, priced in
+    dollars. To BUY yes you cross the no bids, so the best yes ask is one minus
+    the highest no bid. Reading the yes ladder as though it were asks quotes
+    the wrong side of the spread.
+    """
     out: list[BookLevel] = []
-    for entry in raw or []:
+    for entry in bids or []:
         try:
-            price_c, size = entry[0], entry[1]
-            out.append(BookLevel(price=round(float(price_c) / 100.0, 4),
-                                 size=int(size)))
+            price, size = float(entry[0]), float(entry[1])
         except (TypeError, ValueError, IndexError):
             continue
-    out.sort(key=lambda lv: lv.price, reverse=True)
+        ask = round(1.0 - price, 4)
+        if 0.0 < ask < 1.0:
+            out.append(BookLevel(price=ask, size=int(size)))
+    # Cheapest ask first: that is what a buyer takes.
+    out.sort(key=lambda lv: lv.price)
     return tuple(out)
 
 
+
+
 def _coin(ticker: str) -> str:
-    """BTC from KXBTC15M-26AUG231845-45."""
+    """BTC from KXBTC15M-26AUG231845-45. The coin is what belongs on a card."""
     head = ticker.split("-")[0]
     if head.startswith("KX"):
         head = head[2:]
@@ -175,7 +185,11 @@ class LiveMarketData(MarketDataSource):
         for inst in found:
             raw = self._t.get("orderbook", ticker=inst.ticker)
             ob = raw.get("orderbook", {})
-            book = Book(yes=_levels(ob.get("yes")), no=_levels(ob.get("no")),
+            # The dollar denominated book is `orderbook_fp`; the older
+            # `orderbook` key is cents and may be absent entirely.
+            fp = raw.get("orderbook_fp") or {}
+            book = Book(yes=_asks_from_bids(fp.get("no_dollars")),
+                        no=_asks_from_bids(fp.get("yes_dollars")),
                         received_epoch=time.time())
             with self._lock:
                 self._books[inst.ticker] = book

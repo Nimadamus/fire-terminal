@@ -1,3 +1,5 @@
+**LIVE NOW: https://fire-terminal.onrender.com** (waitlist mode, verified working)
+
 # FIRE distribution channel map
 
 Researched 2026-08-23. Product state at time of writing: v1 feature complete,

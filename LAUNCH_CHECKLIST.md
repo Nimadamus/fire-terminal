@@ -41,7 +41,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 | B2 | Credentials stored via OS secret store, never plaintext | REQUIRED | **Done** (DPAPI) |
 | B3 | Each customer accepts the exchange developer agreement themselves | REQUIRED | **Done**, explicit acknowledgement before credentials, gated by test |
 | B4 | Confirm whether the exchange requires per-application registration | **OPEN** | Ask in A1 |
-| B5 | Credential revocation and rotation path documented for customers | REQUIRED | Partly done: Preferences can remove saved credentials; customer facing doc still needed |
+| B5 | Credential revocation and rotation path documented for customers | REQUIRED | **Done**, `docs/CREDENTIALS.md` ships inside the build and Preferences links to it; release gate fails without it |
 
 ## C. Data rights
 
@@ -104,7 +104,7 @@ scrutiny of the automated system, which is not what is being sold.
 | H2 | Demo mode usable without any account | REQUIRED | **Done** |
 | H3 | Support bundle redacts secrets, verified | REQUIRED | **Done**, enforced by test |
 | H4 | No stack traces reach the customer | REQUIRED | **Done** |
-| H5 | Signed installer, code signing certificate | REQUIRED | Installer **builds and launches** (31.8 MB). Certificate still needed. |
+| H5 | Signed installer, code signing certificate | REQUIRED | **Installer done**: `FIRE-<version>-setup.exe`, 11.7 MB, per user, no admin prompt, silent install and uninstall verified. **Certificate still needed** and is on you: unsigned means a SmartScreen warning on every first run. |
 | H6 | Update feed and version check | REQUIRED | **Client done** (`updates.py`, non blocking, sends nothing about the customer). Feed hosting still needed. |
 | H7 | Crash reporting, sanitized | REQUIRED | **Done**, no locals rendered, credential frames withheld, discarded if not verifiably clean |
 

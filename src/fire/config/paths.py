@@ -46,3 +46,22 @@ def bundles_dir() -> Path:
     p = data_dir() / "support"
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def resource(name: str):
+    """A read-only file shipped with the application, or None if it is missing.
+
+    Frozen builds unpack these next to the executable; running from source they
+    sit in `docs/` at the top of the repository. Returns None rather than
+    raising, because a missing help file must never stop the terminal opening.
+    """
+    candidates = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(meipass) / "docs" / name)
+    here = Path(__file__).resolve()
+    candidates.append(here.parents[3] / "docs" / name)     # <repo>/docs
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None

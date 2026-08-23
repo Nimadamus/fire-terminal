@@ -19,7 +19,9 @@ a = Analysis(
     ['../src/fire/__main__.py'],
     pathex=['../src'],
     binaries=[],
-    datas=[],
+    # Customer facing guidance travels with the application. Someone
+    # whose laptop was stolen should not have to find a web page.
+    datas=[('../docs/CREDENTIALS.md', 'docs')],
     hiddenimports=[
         'fire.venues.demo.venue',
         'fire.venues.kalshi.venue',

@@ -117,10 +117,15 @@ def main(argv: list[str]) -> int:
     except Exception:
         pass
 
-    # 5. entry point and size
+    # 5. entry point, and the guidance the app links to
     exe = list(root.glob("FIRE.exe")) + list(root.glob("FIRE"))
     if not exe:
         fail("no FIRE entry point in the bundle")
+
+    # Preferences links to this. A build that ships without it hands the
+    # customer a dead button on the day their laptop goes missing.
+    if not list(root.glob("**/docs/CREDENTIALS.md")):
+        fail("docs/CREDENTIALS.md is missing from the bundle")
     size_mb = sum(p.stat().st_size for p in files) / (1024 * 1024)
     if size_mb > MAX_BUNDLE_MB:
         fail(f"bundle is {size_mb:.0f} MB, over the {MAX_BUNDLE_MB} MB ceiling")

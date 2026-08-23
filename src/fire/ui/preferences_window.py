@@ -1,7 +1,10 @@
 """Preferences. Everything the customer is allowed to change, in one place."""
 from __future__ import annotations
 
+import os
+import sys
 import tkinter as tk
+import webbrowser
 from tkinter import messagebox
 
 from fire.config.credentials import CredentialStore
@@ -121,10 +124,19 @@ class PreferencesWindow(tk.Toplevel):
         tk.Label(box, text=f"Secure store: {self.store.backend_name()}",
                  bg=p.ground, fg=p.text_faint, font=Font.small,
                  anchor="w").pack(fill="x", pady=(0, Space.sm))
+        row = tk.Frame(box, bg=p.ground)
+        row.pack(fill="x")
         if configured:
-            FlatButton(box, "Remove saved credentials", self._clear_credentials, p,
+            FlatButton(row, "Remove saved credentials", self._clear_credentials, p,
                        bg=p.panel_hi, fg=p.no, hover=p.rule,
-                       font=Font.small, pady=6).pack(anchor="w")
+                       font=Font.small, pady=6).pack(side="left")
+        # Rotation and revocation are things a customer needs at the worst
+        # possible moment, so the instructions travel with the application
+        # rather than living on a web page they have to find.
+        FlatButton(row, "Key security and rotation", self._open_key_doc, p,
+                   bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
+                   font=Font.small, pady=6).pack(
+                       side="left", padx=(Space.sm if configured else 0, 0))
 
         # -- footer ----------------------------------------------------------
         foot = tk.Frame(self, bg=p.ground)
@@ -163,6 +175,23 @@ class PreferencesWindow(tk.Toplevel):
         self.store.clear()
         self.msg.configure(text="Credentials removed from this computer.",
                            fg=self.pal.good)
+
+    def _open_key_doc(self) -> None:
+        from fire.config.paths import resource
+        path = resource("CREDENTIALS.md")
+        if path is None:
+            self.msg.configure(
+                text="That guide is missing from this installation. "
+                     "Reinstall FIRE to restore it.", fg=self.pal.warn)
+            return
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(path))            # noqa: S606
+            else:
+                webbrowser.open(path.as_uri())
+        except Exception:
+            self.msg.configure(text=f"Open this file to read it: {path}",
+                               fg=self.pal.text_dim)
 
     def _save(self) -> None:
         try:

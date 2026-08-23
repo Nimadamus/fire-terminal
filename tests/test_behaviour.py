@@ -123,3 +123,21 @@ def test_redacts_windows_user_path():
 def test_assert_clean_raises_on_leak():
     with pytest.raises(AssertionError):
         assert_clean("-----BEGIN RSA PRIVATE KEY-----")
+
+
+# -- shipped guidance ------------------------------------------------------
+def test_the_key_security_guide_ships_and_is_findable():
+    from fire.config.paths import resource
+    path = resource("CREDENTIALS.md")
+    assert path is not None, "Preferences links to this file"
+    text = path.read_text(encoding="utf-8").lower()
+    # The two things a customer needs at the worst possible moment.
+    assert "rotat" in text and "revok" in text
+    assert "lost, stolen" in text
+    # And the promise that makes phishing obvious.
+    assert "never ask" in text
+
+
+def test_a_missing_resource_returns_none_rather_than_raising():
+    from fire.config.paths import resource
+    assert resource("no-such-file-9f3a.md") is None

@@ -227,11 +227,45 @@ and roughly 24 GB of research. None of it exists in this repository.
 * `accepted_terms_version` is recorded, so bumping `TERMS_VERSION` re-prompts
   everyone. Changed terms need fresh consent rather than silent drift.
 
+**Build 6.** Lapsed subscriptions, the credential guide, and a real installer.
+
+* **A lapse reaches the interface before the click.** `entitlement/policy.py`
+  answers what each state permits and `entitlement/watch.py` checks for changes
+  off the UI thread. Order entry switches off, every card says so in one line,
+  and a bar across the top carries the full reason with both ways out. Renewing
+  from the Account window brings the buttons back without a restart.
+* Demo has its own gate, so REVOKED stops demo too. Otherwise revocation would
+  be decoration. EXPIRED and UNLICENSED leave demo open, because a customer who
+  cannot evaluate the product will not buy it.
+* **A failed check never downgrades anyone.** If the provider raises, the last
+  known good answer stands. Losing access because the wifi dropped is a worse
+  failure than a few minutes of stale state.
+* **Switching to demo is an explicit click behind a confirmation.** Never
+  automatic. A simulated balance appearing where a real one was, while real
+  positions are still open at the exchange, is how somebody gets hurt.
+* **`docs/CREDENTIALS.md`** ships inside the build and Preferences links to it:
+  where the key lives, how to rotate it in an order that cannot lock you out
+  mid window, how to revoke it, what to do if the laptop is stolen, and the
+  promise that we will never ask for the private key. The release gate fails a
+  build that does not contain it.
+* **A real installer**, not a folder. Per user, no administrator prompt, fixed
+  AppId so versions upgrade in place, and uninstall asks before touching
+  customer data and states plainly that removing the local copy of a key does
+  not revoke it at the exchange.
+* One bug found and fixed in the installer: a plain `MsgBox` in the uninstall
+  step ignores `/SUPPRESSMSGBOXES`, so a silent uninstall hung forever on a
+  dialog nobody could see. `SuppressibleMsgBox` with an explicit default fixes
+  it. Verified: silent install and uninstall round trip in 2.7 seconds,
+  customer data correctly kept.
+
 ## 8. Verified state
 
 ```
-205 tests passing, zero skipped
-Packaged FIRE.exe builds and launches (31.8 MB, 963 files)
+232 tests passing, zero skipped
+Packaged FIRE.exe builds and launches (31.8 MB, 964 files)
+Installer builds, installs, launches and uninstalls silently (11.7 MB)
+A lapsed subscription disables order entry before anyone can click
+A redeemed licence re-enables it without a restart
 Every window builds and tears down under test
 Risk limit proven to block an oversized order through the real UI path
 Release gate passes a clean bundle and blocks a planted private key

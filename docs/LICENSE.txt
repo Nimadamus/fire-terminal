@@ -1,0 +1,56 @@
+FIRE END USER LICENCE AGREEMENT
+Version 2026-08-1
+
+DRAFT. This agreement has not yet been reviewed by a lawyer and section 9 is
+incomplete. Do not ship a build to a paying customer with this notice still in
+place; see LAUNCH_CHECKLIST.md items F1 and G6.
+
+Trading event contracts can lose you the entire amount you risk. FIRE places
+the orders you click. It gives no advice, no recommendations and no signals,
+and it does not trade on your behalf.
+
+1. What you are buying. A personal, non exclusive, non transferable
+licence to install and use FIRE on computers you control, for as long as your
+subscription is active. You are buying access to software, not a service that
+trades for you and not any promise about results.
+
+2. What you may not do. Resell, sublicense, rent or redistribute FIRE.
+Reverse engineer, decompile or attempt to derive its source, except where that
+right cannot lawfully be excluded. Remove or obscure any notice in it. Use it
+to break the rules of any exchange or any law that applies to you.
+
+3. Your exchange account is yours. FIRE connects to your exchange using
+credentials you supply. You remain solely responsible for that account, for
+complying with your exchange's own terms, and for every order placed from it,
+whether placed through FIRE or otherwise. We are not a broker, we are not your
+agent, we take no custody of your funds, and we have no access to your
+account.
+
+4. No warranty. FIRE is provided "as is" and "as available", without
+warranty of any kind, express or implied, including merchantability, fitness
+for a particular purpose, accuracy, and non infringement. We do not warrant
+that FIRE will be uninterrupted, error free, or that any data it displays is
+accurate, complete or timely.
+
+5. Limitation of liability. To the maximum extent permitted by law, we are
+not liable for any trading losses, lost profits, lost opportunity, missed or
+duplicated orders, incorrect or delayed market data, or any indirect,
+incidental, special or consequential damages, arising from your use of or
+inability to use FIRE. Our total aggregate liability to you for any claim is
+limited to the amount you paid us in the twelve months before the claim
+arose. Nothing here excludes liability that cannot lawfully be excluded.
+
+6. Assumption of risk. You acknowledge that trading event contracts can
+result in the total loss of the amount risked, that you have read the risk
+disclosure, and that you make your own trading decisions.
+
+7. Termination. You may stop using FIRE at any time. We may terminate this
+licence if you materially breach it. On termination your licence ends; your
+exchange account and its contents are unaffected because we never had access
+to them.
+
+8. Changes. We may update FIRE and these terms. Material changes will be
+notified in the application before they take effect.
+
+9. Governing law. [To be completed once the business entity exists. This
+should match the entity's jurisdiction, checklist item G6.]

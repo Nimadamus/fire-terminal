@@ -15,3 +15,5 @@ MODEL_REGISTRY/
 SHARED_ACCOUNT_STATE/
 *.jsonl
 fire_stdio.log
+dist/
+build/

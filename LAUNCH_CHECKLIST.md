@@ -68,7 +68,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 |---|---|---|---|
 | E1 | Product name is "FIRE", not derived from any exchange mark | REQUIRED | **Done** |
 | E2 | No exchange logo, wordmark or colour in product or marketing | REQUIRED | **Done** |
-| E3 | Clear statement that FIRE is independent and unaffiliated | REQUIRED | Needs copy |
+| E3 | Clear statement that FIRE is independent and unaffiliated | REQUIRED | **Drafted**; naming any exchange still gated on A4 |
 | E4 | Trademark search on "FIRE" for trading software | REQUIRED | Not started |
 
 ## F. Regulatory posture
@@ -89,10 +89,10 @@ scrutiny of the automated system, which is not what is being sold.
 
 | # | Item | Type | State |
 |---|---|---|---|
-| G1 | EULA with no warranty and a liability cap | REQUIRED | Not started |
-| G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | Not started |
-| G3 | Privacy policy covering what FIRE stores and where | REQUIRED | Not started |
-| G4 | Refund and cancellation terms | REQUIRED | Not started |
+| G1 | EULA with no warranty and a liability cap | REQUIRED | **Drafted** (`docs/LEGAL.md`), needs legal review |
+| G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | **Drafted**, needs legal review and a setup screen |
+| G3 | Privacy policy covering what FIRE stores and where | REQUIRED | **Drafted**, needs legal review |
+| G4 | Refund and cancellation terms | REQUIRED | **Drafted** (14 day full refund), needs legal review |
 | G5 | Support channel and response expectation | REQUIRED | Not started |
 | G6 | Business entity in place before taking payment | REQUIRED | Not started |
 
@@ -106,7 +106,7 @@ scrutiny of the automated system, which is not what is being sold.
 | H4 | No stack traces reach the customer | REQUIRED | **Done** |
 | H5 | Signed installer, code signing certificate | REQUIRED | Installer **builds and launches** (31.8 MB). Certificate still needed. |
 | H6 | Update feed and version check | REQUIRED | **Client done** (`updates.py`, non blocking, sends nothing about the customer). Feed hosting still needed. |
-| H7 | Crash reporting, sanitized | REQUIRED | Not started |
+| H7 | Crash reporting, sanitized | REQUIRED | **Done**, no locals rendered, credential frames withheld, discarded if not verifiably clean |
 
 ---
 

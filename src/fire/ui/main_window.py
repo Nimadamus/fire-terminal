@@ -239,8 +239,9 @@ class MainWindow(tk.Tk):
         right = tk.Frame(inner, bg=p.panel)
         right.pack(side="right")
         self.ent_lbl = tk.Label(right, text="", bg=p.panel, fg=p.text_faint,
-                                font=Font.small)
+                                font=Font.small, cursor="hand2")
         self.ent_lbl.pack(side="right", padx=(Space.md, 0))
+        self.ent_lbl.bind("<Button-1>", lambda _e: self._open_account())
         FlatButton(right, "Diagnostics", self._open_diagnostics, p,
                    bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
                    font=Font.small, pady=5).pack(side="right", padx=4)
@@ -394,6 +395,23 @@ class MainWindow(tk.Tk):
     def _open_preferences(self) -> None:
         from fire.ui.preferences_window import PreferencesWindow
         PreferencesWindow(self)
+
+    def _open_account(self) -> None:
+        from fire.ui.account_window import AccountWindow
+        AccountWindow(self)
+
+    def report_crash(self, path) -> None:
+        """Called by the crash handler. Says what happened in plain words and
+        never shows the traceback."""
+        try:
+            self.footer.configure(
+                text=("FIRE hit an unexpected problem. Your account and orders "
+                      "were not affected. Open Diagnostics to send us the detail."
+                      if path else
+                      "FIRE hit an unexpected problem. Open Diagnostics for help."),
+                fg=self.pal.bad)
+        except Exception:
+            pass
 
     def on_close(self) -> None:
         self.prefs.default_stake = self.prefs.default_stake

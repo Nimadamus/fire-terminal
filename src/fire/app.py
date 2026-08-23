@@ -95,6 +95,15 @@ def main(argv: list[str] | None = None) -> int:
 
     from fire.ui.main_window import MainWindow
     window = MainWindow(session, prefs, session._entitlement)
+
+    # Uncaught errors are written locally, scrubbed, and never shown raw.
+    from fire.diagnostics import crash
+    crash.install(on_crash=window.report_crash)
+
+    if prefs.check_for_updates:
+        from fire import updates
+        updates.check_in_background(lambda release: None)
+
     window.protocol("WM_DELETE_WINDOW", window.on_close)
     window.mainloop()
     return 0

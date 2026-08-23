@@ -127,6 +127,8 @@ and roughly 24 GB of research. None of it exists in this repository.
 | D8 | Architectural rules are tests, not documentation | The separation is the thing being sold. It has to fail the build when broken. |
 | D9 | Exchange authorization is a launch gate, not an engineering blocker | Nima's call. Everything that can be built safely gets built; nothing ships or is advertised until permission is in writing. The endpoint profile is the single seam that stays empty until then. |
 | D10 | Tkinter for v1, revisit after launch | Nima's call. Priority is a stable sellable v1, not a framework migration. |
+| D12 | A skipped test is treated as a failing test | Two UI tests silently skipped because the instrument map is only filled by the refresh loop. A green run containing skips is not a green run, so the fixture now primes the state and the tests assert instead of skipping. |
+| D13 | One shared Tk root for the whole UI test module | Creating and destroying Tk roots repeatedly in one process leaves Tcl unable to initialise the next one. That is a tkinter constraint, not an application bug, so the module builds one root and shares it. |
 | D11 | The release gate judges `.pem` files by content, not extension | A CA trust bundle is a `.pem` full of certificates and ships legitimately with any HTTPS client. Blocking the extension produced a false positive on `certifi` and would have trained us to ignore the gate. It now looks for private key markers, and is tested against a planted key. |
 
 ## 5. Bugs found and fixed during the build
@@ -187,11 +189,33 @@ and roughly 24 GB of research. None of it exists in this repository.
   is a release gate that inspects the built bundle for private keys, private
   modules, internal vocabulary and size.
 
+**Build 4.** Crash handling, account UI, legal drafts, UI smoke tests.
+
+* **Sanitized crash capture** (`diagnostics/crash.py`). A traceback is the
+  most dangerous thing we write to disk, because frame locals can be rendered
+  into it. So local variables are never rendered, frames in credential or auth
+  modules have their source withheld, every line passes redaction, and if the
+  result cannot be verified clean the report is discarded rather than written.
+  Losing a report beats leaking a key. Installed for worker threads too.
+* **Account window** reading only the entitlement interface, so connecting a
+  billing backend later changes nothing in the UI. Trial, active, expired,
+  revoked and unlicensed each get their own plain explanation of what still
+  works, and demo is stated as always available.
+* **Legal drafts** at `docs/LEGAL.md`: risk disclosure, EULA, privacy policy,
+  refund terms and the independence statement. **Not lawyer reviewed.** They
+  exist so the shape is settled and the review is cheap.
+* **UI smoke tests.** Every window is now built and torn down against a real
+  session in the suite, plus the real order path and the risk block. This is
+  the layer that catches a renamed attribute or a dead callback, which the
+  other suites cannot see.
+
 ## 8. Verified state
 
 ```
-162 tests passing
-Packaged FIRE.exe builds and launches (31.8 MB)
+198 tests passing, zero skipped
+Packaged FIRE.exe builds and launches (31.8 MB, 963 files)
+Every window builds and tears down under test
+Risk limit proven to block an oversized order through the real UI path
 Release gate passes a clean bundle and blocks a planted private key
 First run onboarding renders and gates the terminal
 Demo mode runs, 12 simulated markets, order entry works end to end

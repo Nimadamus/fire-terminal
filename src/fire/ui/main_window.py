@@ -271,6 +271,7 @@ class MainWindow(tk.Tk):
         self.snapshot = None
         self._instruments = {}
         self.cards: dict[str, CoinCard] = {}
+        self.window_card = None
         self.trading_enabled = True
         self.suspension_note = ""
         # Set when the customer asks to come back in another mode. `app.main`
@@ -291,15 +292,12 @@ class MainWindow(tk.Tk):
         _set_window_icon(self)
         self.configure(bg=self.pal.ground)
         self.geometry("1600x950")
-        self.minsize(1000, 660)
+        self.minsize(1100, 700)
 
 
         self._build_chrome()
         self._build_grid()
-        # Maximise AFTER the widgets exist. Doing it in the constructor, before
-        # anything is packed, leaves Windows with a full screen frame whose
-        # children were never laid out, which paints as a black rectangle.
-        self.after(60, self._maximise)
+        self.after(60, self._fit_to_screen)
         self._apply_trading_state()
         # Only live sessions need the periodic check. In demo there is no order
         # to lose and no reason to keep a thread awake.
@@ -416,7 +414,7 @@ class MainWindow(tk.Tk):
         codes = self._visible_codes()
         if self.prefs.coins_visible:
             codes = [c for c in codes if c in self.prefs.coins_visible]
-        per_row = 5
+        per_row = 4
         for idx, code in enumerate(codes[:self.prefs.panels_per_page]):
             card = CoinCard(self.grid_host, self, code)
             card.grid(row=idx // per_row, column=idx % per_row,
@@ -427,35 +425,43 @@ class MainWindow(tk.Tk):
         for r in range((len(self.cards) + per_row - 1) // per_row):
             self.grid_host.rowconfigure(r, weight=1, minsize=CARD_H)
 
-        # Bottom right: what we filled. Two at a time, because a third would
-        # push the newest one off a screen already full of markets, and the
-        # Activity window holds the rest.
         strip = tk.Frame(self, bg=p.ground)
         strip.pack(fill="x", padx=Space.lg, pady=(0, Space.sm))
-
         self.footer = tk.Label(strip, text="", bg=p.ground, fg=p.text_faint,
                                font=Font.data_sm, anchor="w")
         self.footer.pack(side="left", fill="x", expand=True)
 
-        self.fill_panel = tk.Frame(strip, bg=p.panel,
-                                   highlightthickness=1,
-                                   highlightbackground=p.rule)
-        self.fill_panel.pack(side="right")
-        self.fill_head = tk.Label(self.fill_panel, text="FILLS  0 / 2",
-                                  bg=p.panel, fg=p.accent, font=Font.label)
-        self.fill_head.pack(anchor="w", padx=Space.md, pady=(Space.sm, 0))
-        self.fill_rows = []
-        for _ in range(MAX_FILL_ROWS):
-            row = tk.Label(self.fill_panel, text="", bg=p.panel, fg=p.text_dim,
-                           font=Font.data_sm, anchor="w", justify="left")
-            row.pack(anchor="w", padx=Space.md, pady=(0, 2))
-            self.fill_rows.append(row)
 
-        tk.Frame(self.fill_panel, bg=p.panel, height=Space.sm).pack()
 
-    def _maximise(self) -> None:
+    def _place_window_card(self, per_row: int) -> None:
+        """Bottom right, taking whatever columns the coin cards left free.
+
+        Spanning rather than sitting in one cell is deliberate: this is the
+        panel worth looking at when something fills, and a card sized slot
+        makes it as easy to miss as a market you are not trading.
+        """
+        from fire.ui.window_card import WindowCard
+        if getattr(self, "window_card", None) is not None:
+            self.window_card.destroy()
+        count = len(self.cards)
+        row = count // per_row
+        column = count % per_row
+        span = max(1, per_row - column)
+        self.window_card = WindowCard(self.grid_host, self)
+        self.window_card.grid(row=row, column=column, columnspan=span,
+                              padx=Space.sm, pady=Space.sm, sticky="nsew")
+
+    def _fit_to_screen(self) -> None:
+        """Size to the screen without asking Windows to maximise us.
+
+        state("zoomed") paints this window black on this machine, both before
+        and after the widgets exist, so the size is set directly instead. The
+        result is the same and it actually draws.
+        """
         try:
-            self.state("zoomed")
+            width = self.winfo_screenwidth() - 80
+            height = self.winfo_screenheight() - 140
+            self.geometry(f"{max(1100, width)}x{max(700, height)}+30+20")
         except Exception:
             pass
 
@@ -478,13 +484,14 @@ class MainWindow(tk.Tk):
         for card in self.cards.values():
             card.destroy()
         self.cards.clear()
-        per_row = 5
+        per_row = 4
         for idx, code in enumerate(codes):
             card = CoinCard(self.grid_host, self, code)
             card.grid(row=idx // per_row, column=idx % per_row,
                       padx=Space.sm, pady=Space.sm, sticky="nsew")
             self.cards[code] = card
-        for r in range((len(self.cards) + per_row - 1) // per_row):
+        self._place_window_card(per_row)
+        for r in range((len(self.cards) + per_row - 1) // per_row + 1):
             self.grid_host.rowconfigure(r, weight=1, minsize=CARD_H)
         self._apply_trading_state()
 
@@ -589,26 +596,14 @@ class MainWindow(tk.Tk):
             return
         self._next_fill_poll = now + FILL_POLL_SECONDS
         try:
-            fills = list(self.session.recent_fills(limit=MAX_FILL_ROWS))
+            fills = list(self.session.recent_fills(limit=60))
         except Exception:
             return
 
-        p = self.pal
-        self.fill_head.configure(
-            text=f"FILLS  {min(len(fills), MAX_FILL_ROWS)} / {MAX_FILL_ROWS}")
-        for index, row in enumerate(self.fill_rows):
-            if index >= len(fills):
-                row.configure(text="")
-                continue
-            fill = fills[index]
-            risked = fill.count * fill.price + fill.fee_dollars
-            pays = float(fill.count)          # a binary settles at one dollar
-            coin = fill.ticker.split("-")[0].replace("KX", "").replace("15M", "")
-            row.configure(
-                text=(f"{coin} {fill.side.value.upper()}  {fill.count} @ "
-                      f"{fill.price:.2f}   risk ${risked:,.2f}   "
-                      f"wins ${pays:,.2f}"),
-                fg=p.yes if fill.side.value == "yes" else p.no)
+        card = getattr(self, "window_card", None)
+        if card is not None:
+            open_tickers = {i.ticker for i in self._instruments.values()}
+            card.refresh(fills, open_tickers)
 
     # -- fill notifications -------------------------------------------------
     def _poll_fills(self, now: float) -> None:

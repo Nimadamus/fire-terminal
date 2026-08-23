@@ -66,18 +66,21 @@ else:
     UI_FACE, MONO_FACE = "DejaVu Sans", "DejaVu Sans Mono"
 
 
+# Sized to be read across a desk at a glance, not to fit the most on screen.
+# Everything that carries a number is bold: on a card of small grey text the
+# eye has nothing to land on.
 class Font:
-    title = (UI_FACE, 15, "bold")
-    heading = (UI_FACE, 11, "bold")
-    body = (UI_FACE, 10)
-    small = (UI_FACE, 9)
-    micro = (UI_FACE, 8)
-    label = (UI_FACE, 8, "bold")
-    price = (MONO_FACE, 21, "bold")
-    price_sm = (MONO_FACE, 13, "bold")
-    data = (MONO_FACE, 9)
-    data_sm = (MONO_FACE, 8)
-    button = (UI_FACE, 10, "bold")
+    title = (UI_FACE, 18, "bold")
+    heading = (UI_FACE, 14, "bold")
+    body = (UI_FACE, 12)
+    small = (UI_FACE, 11)
+    micro = (UI_FACE, 10)
+    label = (UI_FACE, 10, "bold")
+    price = (MONO_FACE, 26, "bold")
+    price_sm = (MONO_FACE, 17, "bold")
+    data = (MONO_FACE, 12, "bold")
+    data_sm = (MONO_FACE, 11, "bold")
+    button = (UI_FACE, 12, "bold")
 
 
 # -- spacing ---------------------------------------------------------------
@@ -85,4 +88,4 @@ class Space:
     xs, sm, md, lg, xl = 3, 6, 10, 16, 24
 
 
-CARD_W, CARD_H = 330, 340
+CARD_W, CARD_H = 380, 300

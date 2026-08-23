@@ -240,3 +240,56 @@ def test_the_viewer_error_says_trading_happens_elsewhere():
     assert "cannot place orders" in shown["title"].lower()
     assert "read only" in shown["remedy"].lower()
     assert "elsewhere" in shown["remedy"].lower()
+
+
+# -- this window's fills ---------------------------------------------------
+def _fill(ticker, side, count, price, fee=0.0):
+    from fire.core.models import Fill, Side
+    return Fill(ticker=ticker, side=Side.YES if side == "yes" else Side.NO,
+                count=count, price=price, fee_dollars=fee, epoch=0.0)
+
+
+def test_a_fill_from_another_window_is_not_counted():
+    """The panel answers what we hold NOW, not what we ever held.
+
+    Showing a previous window's fill under a live window reads as a position
+    you do not have, which is worse than showing nothing.
+    """
+    from fire.ui.window_card import WindowCard
+    rows = WindowCard._positions(
+        None,
+        [_fill("KXBTC15M-26AUG231915-15", "yes", 10, 0.40),
+         _fill("KXBTC15M-26AUG231900-15", "yes", 10, 0.40)],
+        {"KXBTC15M-26AUG231915-15"})
+    assert len(rows) == 1
+    assert rows[0]["coin"] == "BTC"
+
+
+def test_stake_and_payout_reconcile():
+    """A binary pays a dollar a contract, so profit is payout less cost less fee."""
+    from fire.ui.window_card import WindowCard, _fee
+    rows = WindowCard._positions(
+        None, [_fill("KXETH15M-1", "no", 20, 0.90)], {"KXETH15M-1"})
+    r = rows[0]
+    assert r["contracts"] == 20
+    assert r["stake"] == pytest.approx(18.0)
+    assert r["profit"] == pytest.approx(20 - 18.0 - _fee(0.90, 20))
+
+
+def test_repeat_fills_on_one_market_aggregate():
+    from fire.ui.window_card import WindowCard
+    rows = WindowCard._positions(
+        None,
+        [_fill("KXSOL15M-1", "yes", 10, 0.50), _fill("KXSOL15M-1", "yes", 10, 0.70)],
+        {"KXSOL15M-1"})
+    assert len(rows) == 1
+    assert rows[0]["contracts"] == 20
+    assert rows[0]["price"] == pytest.approx(0.60)
+
+
+def test_a_price_outside_zero_to_one_is_ignored():
+    """No trustworthy fill price means no row, not a nonsense row."""
+    from fire.ui.window_card import WindowCard
+    assert WindowCard._positions(
+        None, [_fill("KXBTC15M-1", "yes", 5, 0.0),
+               _fill("KXBTC15M-1", "yes", 5, 1.0)], {"KXBTC15M-1"}) == []

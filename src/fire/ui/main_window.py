@@ -244,6 +244,9 @@ class MainWindow(tk.Tk):
         FlatButton(right, "Diagnostics", self._open_diagnostics, p,
                    bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
                    font=Font.small, pady=5).pack(side="right", padx=4)
+        FlatButton(right, "Preferences", self._open_preferences, p,
+                   bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
+                   font=Font.small, pady=5).pack(side="right", padx=4)
         if is_demo:
             FlatButton(right, "Reset demo", self._reset_demo, p,
                        bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
@@ -387,6 +390,10 @@ class MainWindow(tk.Tk):
     def _open_diagnostics(self) -> None:
         from fire.ui.diagnostics_window import DiagnosticsWindow
         DiagnosticsWindow(self)
+
+    def _open_preferences(self) -> None:
+        from fire.ui.preferences_window import PreferencesWindow
+        PreferencesWindow(self)
 
     def on_close(self) -> None:
         self.prefs.default_stake = self.prefs.default_stake

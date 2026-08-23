@@ -139,16 +139,33 @@ and roughly 24 GB of research. None of it exists in this repository.
 | Blocker | Owner | Status |
 |---|---|---|
 | Written distribution permission from the exchange | Nima | **unsent.** Draft ready. Nothing ships until this resolves. |
+| UI toolkit: stay on tkinter or move to PySide6 | Nima | asked, recommendation is stay for v1 |
 | Live adapter not implemented | Claude | next work item, safe to build |
-| Onboarding flow | Claude | scheduled |
-| Packaging and update feed | Claude | scheduled |
+| Packaging, code signing and update feed | Claude | scheduled |
 | Billing backend | later | interface exists, no implementation |
 
-## 7. Verified state
+## 7. Progress log
+
+**Build 2.** Onboarding and preferences.
+
+* First run flow: welcome, then either demo in one click or a credentials
+  step, then a mandatory risk ceiling before the terminal opens. Closing the
+  window is treated as consenting to neither and exits without connecting.
+* The credentials step validates by actually parsing the key rather than
+  string matching, so the customer gets a precise reason when a paste is
+  wrong (truncated, or password protected).
+* Preferences covers risk, stake buttons, default amount, markets per page,
+  theme, sound, update checks, and removing saved credentials. Risk changes
+  apply live; theme and layout ask for a restart rather than pretending to
+  hot swap.
+
+## 8. Verified state
 
 ```
-119 tests passing
+125 tests passing
+First run onboarding renders and gates the terminal
 Demo mode runs, 12 simulated markets, order entry works end to end
+Preferences persists and applies risk changes without a restart
 No network imports anywhere in the demo package
 No private module imports anywhere in src/fire
 No PEM blocks or key shaped identifiers anywhere in src/fire

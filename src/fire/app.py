@@ -66,6 +66,17 @@ def main(argv: list[str] | None = None) -> int:
 
     _setup_logging()
     prefs = prefs_module.load()
+
+    # First run: let them choose demo or a real account before anything
+    # connects. Closing the window means they did not consent to either.
+    if not prefs.onboarding_complete and requested is None:
+        from fire.ui.onboarding import run_onboarding
+        chosen = run_onboarding(prefs)
+        if chosen is None:
+            return 0
+        prefs = prefs_module.load()
+        requested = chosen
+
     mode = choose_mode(prefs, requested)
 
     try:

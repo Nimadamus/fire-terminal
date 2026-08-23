@@ -287,6 +287,30 @@ def _on_payment_failed(invoice: Any) -> None:
                  record["key"])
 
 
+# --------------------------------------------------------------------------
+# Pre launch
+# --------------------------------------------------------------------------
+class WaitlistIn(BaseModel):
+    email: str
+    note: str = ""
+    source: str = ""
+
+
+@app.post("/waitlist")
+def waitlist(body: WaitlistIn) -> dict[str, Any]:
+    """Collect interest before there is anything to buy.
+
+    Stores an address and an optional note. Nothing else, because nothing else
+    is needed and every extra field is something to look after.
+    """
+    email = (body.email or "").strip().lower()
+    if "@" not in email or len(email) < 5 or len(email) > 200:
+        raise HTTPException(400, "That does not look like an email address.")
+    fresh = store.join_waitlist(email, body.note or "", body.source or "")
+    # Signing up twice is not an error and must not be reported as one.
+    return {"ok": True, "new": fresh}
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     ready = bool(os.environ.get("FIRE_SIGNING_KEY"))

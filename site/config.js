@@ -8,6 +8,12 @@ window.FIRE_CONFIG = {
   // Base URL of the licence service, no trailing slash.
   api: "",
 
+  // Flip to true only when payments are live AND the exchange has authorised
+  // distribution in writing. While it is false the page shows prices and a
+  // waitlist instead of buy buttons, which is honest and still collects the
+  // people who would have bought.
+  selling: false,
+
   // Where a customer reaches a human.
   supportEmail: "",
 
@@ -43,15 +49,27 @@ document.addEventListener("DOMContentLoaded", function () {
     el.textContent = c.version || "";
   });
 
-  // A build with no licence service cannot take money. Say so plainly rather
-  // than letting somebody click a button that silently fails.
-  if (!c.api) {
+  // Before selling opens, the buy buttons come off entirely and the waitlist
+  // takes their place. A button that silently fails is worse than one that is
+  // honestly not there yet.
+  var open = Boolean(c.api) && c.selling === true;
+  var waitlist = document.getElementById("waitlist");
+  if (!open) {
     document.querySelectorAll("[data-plan]").forEach(function (el) {
-      el.textContent = "Coming soon";
-      el.classList.add("btn-ghost");
-      el.classList.remove("btn-primary");
-      el.style.pointerEvents = "none";
-      el.style.opacity = "0.6";
+      el.remove();
     });
+    if (waitlist) { waitlist.hidden = false; }
+    document.querySelectorAll('a[href="#pricing"].btn').forEach(function (el) {
+      el.textContent = "Join the waitlist";
+    });
+    // The hero promised a trial. There is no trial to start yet, so do not
+    // promise one.
+    var note = document.getElementById("hero-note");
+    if (note) {
+      note.textContent = "Not on sale yet. Leave your address below and you "
+        + "will hear the day it opens, at the founding price.";
+    }
+  } else if (waitlist) {
+    waitlist.hidden = true;
   }
 });

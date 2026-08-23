@@ -223,3 +223,29 @@ def test_health_reports_what_is_actually_configured(service):
     assert body["ok"] is True
     assert body["signing_key"] is True
     assert body["billing"] is False      # no Stripe key in the test environment
+
+
+# -- pre launch ------------------------------------------------------------
+def test_the_waitlist_takes_an_address_and_nothing_else(service):
+    client, store_mod, _, _ = service
+    before = store_mod.waitlist_size()
+    r = client.post("/waitlist", json={"email": "Trader@Example.com",
+                                       "note": "trading BTC 15m",
+                                       "source": "landing"})
+    assert r.status_code == 200 and r.json()["new"] is True
+    assert store_mod.waitlist_size() == before + 1
+
+
+def test_signing_up_twice_is_not_an_error(service):
+    """A customer who forgets they already joined must not see a failure."""
+    client, _, _, _ = service
+    client.post("/waitlist", json={"email": "twice@example.com"})
+    again = client.post("/waitlist", json={"email": "TWICE@example.com"})
+    assert again.status_code == 200
+    assert again.json() == {"ok": True, "new": False}
+
+
+def test_a_bad_address_is_refused(service):
+    client, _, _, _ = service
+    for junk in ("", "nope", "a@b", "x" * 400 + "@example.com"):
+        assert client.post("/waitlist", json={"email": junk}).status_code == 400

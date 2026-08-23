@@ -41,7 +41,7 @@
       <a class="btn btn-primary" href="#pricing">Start your free trial</a>
       <a class="btn btn-ghost" href="#demo">Try demo mode first</a>
     </div>
-    <p class="hero-note">
+    <p class="hero-note" id="hero-note">
       14 day trial. No card required to start. Demo mode is free forever and
       needs no exchange account.
     </p>
@@ -265,6 +265,26 @@
       </div>
     </div>
 
+    <!-- Shown before selling opens. The prices above stay visible, because
+         somebody deciding whether to care needs to know what it will cost. -->
+    <div class="waitlist" id="waitlist" hidden>
+      <h3 style="margin-bottom:6px">Not on sale yet</h3>
+      <p style="color:var(--text-dim); margin:0 0 18px; max-width:60ch">
+        FIRE is finished and in daily use. It goes on sale once the exchange
+        authorisation we have asked for comes back in writing. Leave your
+        address and you will hear the day it opens, at the founding price.
+      </p>
+      <form id="wl-form" style="display:flex; gap:10px; flex-wrap:wrap">
+        <input id="wl-email" type="email" required placeholder="you@example.com"
+               autocomplete="email"
+               style="flex:1 1 260px; padding:13px 16px; border-radius:6px;
+                      background:var(--panel); border:1px solid var(--rule);
+                      color:var(--text); font-size:16px; font-family:var(--body)">
+        <button class="btn btn-primary" type="submit">Tell me when it opens</button>
+      </form>
+      <p id="wl-msg" style="color:var(--text-faint); font-size:14px; min-height:22px; margin-top:12px"></p>
+    </div>
+
     <div class="founding">
       <strong>Founding members.</strong> The first 50 subscribers pay $39 a
       month, or $390 a year, and keep that price for as long as the subscription
@@ -420,6 +440,35 @@
 <script>
 // Checkout is started by the licence service, which creates the Stripe session.
 // The site never holds a Stripe key and never sees a card.
+// Waitlist, used before selling opens.
+var wlForm = document.getElementById('wl-form');
+if (wlForm) {
+  wlForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var msg = document.getElementById('wl-msg');
+    var email = document.getElementById('wl-email').value.trim();
+    if (!email) { return; }
+    msg.textContent = 'One moment...';
+    fetch(window.FIRE_API + '/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, source: 'landing' })
+    }).then(function (r) {
+      if (!r.ok) { throw new Error('rejected'); }
+      return r.json();
+    }).then(function () {
+      // Whether or not they were already on it, the honest answer is the same.
+      msg.textContent = 'You are on the list. We will write once, when it opens.';
+      msg.style.color = 'var(--yes)';
+      wlForm.hidden = true;
+    }).catch(function () {
+      msg.textContent = 'That did not go through. Check the address, or email '
+        + 'us and we will add you by hand.';
+      msg.style.color = 'var(--no)';
+    });
+  });
+}
+
 document.querySelectorAll('[data-plan]').forEach(function (el) {
   el.addEventListener('click', function (event) {
     event.preventDefault();

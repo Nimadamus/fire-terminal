@@ -80,6 +80,14 @@ SCHEMA = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS waitlist (
+        email   TEXT PRIMARY KEY,
+        note    TEXT NOT NULL DEFAULT '',
+        source  TEXT NOT NULL DEFAULT '',
+        joined  DOUBLE PRECISION NOT NULL
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS events (
         id      TEXT PRIMARY KEY,
         kind    TEXT NOT NULL,
@@ -201,3 +209,18 @@ def seen_event(event_id: str, kind: str = "") -> bool:
     execute("INSERT INTO events (id, kind, seen) VALUES (?, ?, ?)",
             (event_id, kind, time.time()))
     return False
+
+
+# -- waitlist --------------------------------------------------------------
+def join_waitlist(email: str, note: str = "", source: str = "") -> bool:
+    """True if this is a new signup. Signing up twice is not an error."""
+    if fetchone("SELECT 1 FROM waitlist WHERE email = ?", (email,)):
+        return False
+    execute("INSERT INTO waitlist (email, note, source, joined)"
+            " VALUES (?, ?, ?, ?)", (email, note[:500], source[:60], time.time()))
+    return True
+
+
+def waitlist_size() -> int:
+    row = fetchone("SELECT COUNT(*) FROM waitlist", ())
+    return int(row[0]) if row else 0

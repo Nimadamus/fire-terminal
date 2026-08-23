@@ -173,6 +173,12 @@ figcaption {
 }
 .price .btn { width: 100%; }
 
+.waitlist {
+  margin-top: 34px; padding: 28px 30px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--accent);
+}
+.waitlist input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .founding {
   margin-top: 24px; padding: 20px 24px; border-radius: 10px;
   border: 1px dashed var(--accent); background: rgba(240, 136, 62, 0.06);

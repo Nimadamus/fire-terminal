@@ -161,6 +161,10 @@ def licence_by_subscription(sub_id: str) -> Optional[dict]:
     return dict(zip(LICENCE_COLUMNS, row)) if row else None
 
 
+def set_plan(key: str, plan: str) -> None:
+    execute("UPDATE licences SET plan = ? WHERE key = ?", (plan, key))
+
+
 def set_status(key: str, status: str, expires: Optional[float] = None) -> None:
     if expires is None:
         execute("UPDATE licences SET status = ? WHERE key = ?", (status, key))

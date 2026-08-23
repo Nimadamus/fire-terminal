@@ -24,7 +24,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -41,6 +41,10 @@ PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_MONTHLY", "")
 PRICE_ANNUAL = os.environ.get("STRIPE_PRICE_ANNUAL", "")
 SITE_URL = os.environ.get("FIRE_SITE_URL", "").rstrip("/")
 TRIAL_DAYS = int(os.environ.get("FIRE_TRIAL_DAYS", "14"))
+
+# Stripe abandons a webhook that does not answer promptly, so any call we make
+# while handling one has to be bounded well inside that.
+STRIPE_TIMEOUT_S = float(os.environ.get("FIRE_STRIPE_TIMEOUT", "8"))
 
 
 @asynccontextmanager
@@ -199,7 +203,8 @@ def _period_end(subscription: Any) -> Optional[float]:
 
 
 @app.post("/stripe/webhook")
-async def stripe_webhook(request: Request) -> JSONResponse:
+async def stripe_webhook(request: Request,
+                         background: BackgroundTasks) -> JSONResponse:
     if not STRIPE_WEBHOOK_SECRET:
         raise HTTPException(503, "Webhooks are not configured.")
     import stripe
@@ -208,8 +213,12 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     payload = await request.body()
     signature = request.headers.get("stripe-signature", "")
     try:
-        event = stripe.Webhook.construct_event(
+        verified = stripe.Webhook.construct_event(
             payload, signature, STRIPE_WEBHOOK_SECRET)
+        # construct_event returns a stripe Event object, not a dict, and that
+        # object raises on .get(). Convert once here so everything below works
+        # on plain dicts and cannot break again when the SDK changes shape.
+        event = verified.to_dict() if hasattr(verified, "to_dict") else verified
     except Exception as exc:
         # An unverified webhook is somebody else's traffic. Refuse it.
         log.warning("rejected webhook: %s", type(exc).__name__)
@@ -224,7 +233,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     log.info("stripe event %s", kind)
 
     if kind == "checkout.session.completed":
-        _on_checkout_complete(stripe, obj)
+        _on_checkout_complete(stripe, obj, background)
     elif kind in ("customer.subscription.updated",
                   "customer.subscription.created"):
         _on_subscription_change(obj)
@@ -236,7 +245,20 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True})
 
 
-def _on_checkout_complete(stripe, session: Any) -> None:
+def _on_checkout_complete(stripe, session: Any,
+                          background: BackgroundTasks) -> None:
+    """Issue the licence, then let the detail follow.
+
+    Order matters more than it looks. The customer has already paid and is
+    sitting on the success page polling for their key, and Stripe abandons a
+    webhook that does not answer quickly. So the licence is created from what
+    the checkout session already tells us and we answer straight away. Reading
+    the plan name and renewal date from Stripe happens after the response, so
+    the time this webhook takes never depends on how Stripe's API is feeling.
+
+    Doing it the other way round means a slow Stripe API turns into a customer
+    who paid and received nothing, which is the worst thing this service can do.
+    """
     session_id = str(session.get("id") or "")
     customer = str(session.get("customer") or "")
     sub_id = str(session.get("subscription") or "")
@@ -245,22 +267,35 @@ def _on_checkout_complete(stripe, session: Any) -> None:
     if store.licence_by_session(session_id):
         return                          # already issued, nothing to do
 
-    expires, plan = None, "FIRE"
-    if sub_id:
-        try:
-            subscription = stripe.Subscription.retrieve(sub_id)
-            expires = _period_end(subscription)
-            interval = (subscription["items"]["data"][0]["price"]
-                        ["recurring"]["interval"])
-            plan = "FIRE Annual" if interval == "year" else "FIRE Monthly"
-        except Exception:
-            log.warning("could not read subscription %s", sub_id)
-
     key = licences.new_key()
-    store.create_licence(key, email=email, plan=plan, expires=expires,
+    store.create_licence(key, email=email, plan="FIRE", expires=None,
                          stripe_customer=customer, stripe_sub=sub_id,
                          checkout_session=session_id)
     log.info("issued licence for %s", session_id)
+
+    if sub_id and STRIPE_SECRET:
+        background.add_task(_enrich_from_subscription, key, sub_id)
+
+
+def _enrich_from_subscription(key: str, sub_id: str) -> None:
+    """Fill in the plan name and renewal date after the webhook has answered.
+
+    Never fatal. If it fails the customer already has a working licence, and
+    the next customer.subscription.updated event corrects it.
+    """
+    try:
+        import stripe as stripe_sdk
+        stripe_sdk.api_key = STRIPE_SECRET
+        subscription = stripe_sdk.Subscription.retrieve(
+            sub_id, timeout=STRIPE_TIMEOUT_S, max_network_retries=1)
+        interval = (subscription["items"]["data"][0]["price"]
+                    ["recurring"]["interval"])
+        store.set_plan(key, "FIRE Annual" if interval == "year" else "FIRE Monthly")
+        store.set_status(key, "active", _period_end(subscription))
+    except Exception as exc:
+        log.warning("could not read subscription %s (%s); licence %s stands and "
+                    "will be corrected by the next subscription event",
+                    sub_id, type(exc).__name__, key[-4:])
 
 
 def _on_subscription_change(subscription: Any) -> None:

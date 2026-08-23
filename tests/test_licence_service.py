@@ -27,6 +27,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (          # noqa:
 SERVER = Path(__file__).resolve().parents[1] / "server"
 
 
+WEBHOOK_SECRET = "whsec_unit_test_secret"
+
+
 @pytest.fixture(scope="module")
 def service(tmp_path_factory):
     """A running service with its own database and its own signing key."""
@@ -42,6 +45,11 @@ def service(tmp_path_factory):
 
     os.environ["FIRE_SIGNING_KEY"] = pem
     os.environ["FIRE_DB"] = str(tmp / "licences.db")
+    # A webhook secret, so the signed webhook path is actually exercised. It
+    # was not, and a 500 in that handler lived here undetected: every purchase
+    # would have failed and no customer would have received a licence.
+    os.environ["STRIPE_WEBHOOK_SECRET"] = WEBHOOK_SECRET
+    os.environ["STRIPE_SECRET_KEY"] = ""
     os.environ.pop("DATABASE_URL", None)
 
     sys.path.insert(0, str(SERVER))
@@ -345,3 +353,111 @@ def test_the_support_page_and_404_are_served(service):
     missing = client.get("/no-such-page")
     assert missing.status_code == 404
     assert "not here" in missing.text
+
+
+# -- the purchase webhook, signed the way Stripe signs it ------------------
+def _signed(payload: dict) -> tuple[bytes, dict]:
+    import json as _json
+
+    import stripe
+    body = _json.dumps(payload, separators=(",", ":")).encode()
+    ts = int(time.time())
+    sig = stripe.WebhookSignature._compute_signature(
+        f"{ts}.{body.decode()}", WEBHOOK_SECRET)
+    return body, {"stripe-signature": f"t={ts},v1={sig}"}
+
+
+def test_a_real_signed_purchase_issues_a_licence(service):
+    """The whole reason this service exists. Signed exactly as Stripe signs."""
+    pytest.importorskip("stripe")
+    client, store_mod, _, public = service
+    body, headers = _signed({
+        "id": "evt_unit_purchase",
+        "type": "checkout.session.completed",
+        "data": {"object": {"id": "cs_unit_purchase", "customer": "cus_unit",
+                            "subscription": "sub_unit",
+                            "customer_details": {"email": "buyer@example.com"}}},
+    })
+    r = client.post("/stripe/webhook", content=body, headers=headers)
+    assert r.status_code == 200, r.text
+
+    issued = client.get("/licence", params={"session_id": "cs_unit_purchase"})
+    assert issued.status_code == 200
+    key = issued.json()["key"]
+    assert key.startswith("FIRE-")
+
+    activated = client.post("/activate", json={"key": key, "install": "unit-buy"})
+    assert activated.status_code == 200
+    assert _payload(activated.json()["token"], public, "unit-buy").status == "active"
+
+
+def test_a_repeated_purchase_event_issues_only_one_licence(service):
+    pytest.importorskip("stripe")
+    client, store_mod, _, _ = service
+    event = {
+        "id": "evt_unit_dupe",
+        "type": "checkout.session.completed",
+        "data": {"object": {"id": "cs_unit_dupe", "customer": "cus_d",
+                            "subscription": "sub_d",
+                            "customer_details": {"email": "d@example.com"}}},
+    }
+    body, headers = _signed(event)
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+    first = client.get("/licence", params={"session_id": "cs_unit_dupe"}).json()["key"]
+
+    body, headers = _signed(event)
+    second = client.post("/stripe/webhook", content=body, headers=headers)
+    assert second.json().get("duplicate") is True
+    assert client.get("/licence",
+                      params={"session_id": "cs_unit_dupe"}).json()["key"] == first
+
+
+def test_a_cancellation_webhook_expires_the_licence(service):
+    pytest.importorskip("stripe")
+    client, store_mod, _, public = service
+    body, headers = _signed({
+        "id": "evt_unit_cancel",
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"id": "sub_unit", "status": "canceled"}},
+    })
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+    after = client.post("/entitlement", json={"install": "unit-buy"})
+    assert _payload(after.json()["token"], public, "unit-buy").status == "expired"
+
+
+def test_a_failed_payment_does_not_cut_anybody_off(service):
+    """Stripe retries a failed card for days. Only give up when Stripe does."""
+    pytest.importorskip("stripe")
+    client, store_mod, licence_mod, public = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE Monthly", time.time() + 86400,
+                             stripe_sub="sub_failing")
+    client.post("/activate", json={"key": key, "install": "unit-fail"})
+
+    body, headers = _signed({
+        "id": "evt_unit_failed_payment",
+        "type": "invoice.payment_failed",
+        "data": {"object": {"subscription": "sub_failing"}},
+    })
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+    after = client.post("/entitlement", json={"install": "unit-fail"})
+    assert _payload(after.json()["token"], public, "unit-fail").status == "active"
+
+
+def test_a_past_due_subscription_stays_active(service):
+    pytest.importorskip("stripe")
+    client, store_mod, licence_mod, public = service
+    key = licence_mod.new_key()
+    store_mod.create_licence(key, "", "FIRE Monthly", time.time() + 86400,
+                             stripe_sub="sub_pastdue")
+    client.post("/activate", json={"key": key, "install": "unit-pastdue"})
+
+    body, headers = _signed({
+        "id": "evt_unit_pastdue",
+        "type": "customer.subscription.updated",
+        "data": {"object": {"id": "sub_pastdue", "status": "past_due",
+                            "current_period_end": int(time.time()) + 86400}},
+    })
+    assert client.post("/stripe/webhook", content=body, headers=headers).status_code == 200
+    after = client.post("/entitlement", json={"install": "unit-pastdue"})
+    assert _payload(after.json()["token"], public, "unit-pastdue").status == "active"

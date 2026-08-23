@@ -403,7 +403,7 @@ class MainWindow(tk.Tk):
         self.grid_host = tk.Frame(wrap, bg=p.ground)
         self.grid_host.pack(fill="both", expand=True)
 
-        codes = [i.display for i in self.session.market_data.instruments()]
+        codes = self._visible_codes()
         if self.prefs.coins_visible:
             codes = [c for c in codes if c in self.prefs.coins_visible]
         per_row = 5
@@ -421,6 +421,35 @@ class MainWindow(tk.Tk):
                                font=Font.data_sm, anchor="w")
         self.footer.pack(fill="x", padx=Space.lg, pady=(0, Space.sm))
 
+    def _visible_codes(self) -> list:
+        codes = [i.display for i in self.session.market_data.instruments()]
+        if self.prefs.coins_visible:
+            codes = [c for c in codes if c in self.prefs.coins_visible]
+        return codes[:self.prefs.panels_per_page]
+
+    def _rebuild_grid_if_needed(self) -> None:
+        """Draw the cards once the first markets arrive.
+
+        A live venue has nothing at construction time: the first poll has not
+        run. Building the grid only in __init__ left the window empty forever,
+        which is what "the app is blank" was.
+        """
+        codes = self._visible_codes()
+        if not codes or set(codes) == set(self.cards):
+            return
+        for card in self.cards.values():
+            card.destroy()
+        self.cards.clear()
+        per_row = 5
+        for idx, code in enumerate(codes):
+            card = CoinCard(self.grid_host, self, code)
+            card.grid(row=idx // per_row, column=idx % per_row,
+                      padx=Space.sm, pady=Space.sm, sticky="nsew")
+            self.cards[code] = card
+        for r in range((len(self.cards) + per_row - 1) // per_row):
+            self.grid_host.rowconfigure(r, weight=1, minsize=CARD_H)
+        self._apply_trading_state()
+
     # -- data --------------------------------------------------------------
     def instrument_for(self, code: str):
         return self._instruments.get(code)
@@ -431,13 +460,13 @@ class MainWindow(tk.Tk):
             self._instruments = {i.display: i
                                  for i in self.session.market_data.instruments()}
             self.snapshot = self.session.account.snapshot()
+            self._rebuild_grid_if_needed()
             for card in self.cards.values():
                 card.refresh(now)
             self._refresh_chrome()
             if self.watch and self.watch.take_transition():
                 self._apply_trading_state()
             self._show_update_if_any()
-            self._poll_fills(now)
         except FireError as exc:
             self.footer.configure(text=f"{exc.title}. {exc.remedy}",
                                   fg=self.pal.warn)

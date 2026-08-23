@@ -59,6 +59,18 @@ def _levels(raw: Optional[list]) -> tuple[BookLevel, ...]:
     return tuple(out)
 
 
+def _coin(ticker: str) -> str:
+    """BTC from KXBTC15M-26AUG231845-45."""
+    head = ticker.split("-")[0]
+    if head.startswith("KX"):
+        head = head[2:]
+    for suffix in ("15M", "D", "H"):
+        if head.endswith(suffix) and len(head) > len(suffix):
+            head = head[: -len(suffix)]
+            break
+    return head or ticker
+
+
 def _instrument(raw: dict) -> Optional[Instrument]:
     ticker = raw.get("ticker")
     if not ticker:
@@ -67,7 +79,8 @@ def _instrument(raw: dict) -> Optional[Instrument]:
     return Instrument(
         ticker=str(ticker),
         series=str(raw.get("series_ticker") or raw.get("event_ticker") or ""),
-        display=str(raw.get("display") or str(ticker).split("-")[0]),
+        # KXBTC15M reads as noise on a card. The coin is the point.
+        display=_coin(str(ticker)),
         strike=_maybe_float(raw.get("strike") or raw.get("floor_strike")),
         close_epoch=_maybe_float(close),
     )

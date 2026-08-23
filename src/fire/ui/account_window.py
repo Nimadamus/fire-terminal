@@ -136,6 +136,7 @@ class AccountWindow(tk.Toplevel):
             return
         if ent.allows_live_trading:
             self._render()
+            self._tell_the_terminal()
             self.msg.configure(text="Licence applied.", fg=self.pal.good)
         else:
             self.msg.configure(text=ent.message or "That licence key was not accepted.",
@@ -147,4 +148,12 @@ class AccountWindow(tk.Toplevel):
         except Exception:
             pass
         self._render()
+        self._tell_the_terminal()
         self.msg.configure(text="Checked just now.", fg=self.pal.text_faint)
+
+    def _tell_the_terminal(self) -> None:
+        """Renewing must bring the buttons back without a restart."""
+        try:
+            self.app.entitlement_changed()
+        except Exception:
+            pass

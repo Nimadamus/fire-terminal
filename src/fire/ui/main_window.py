@@ -10,6 +10,10 @@ from fire.config.prefs import Preferences, save as save_prefs
 from fire.core.errors import FireError
 from fire.core.models import ConnectionState, Side
 from fire.core.session import Session
+from fire.entitlement.policy import (
+    short_suspension_reason, suspension_reason, trading_allowed,
+)
+from fire.entitlement.watch import EntitlementWatch
 from fire.interfaces.entitlement import EntitlementStatus
 from fire.interfaces.venue import VenueMode
 from fire.risk.limits import RiskLimiter
@@ -130,7 +134,22 @@ class CoinCard(Card):
             return None
         return v
 
+    def set_trading_enabled(self, on: bool, reason: str = "") -> None:
+        self.buy_yes.set_enabled(on)
+        self.buy_no.set_enabled(on)
+        self.stake_entry.configure(state="normal" if on else "disabled")
+        if not on:
+            self._say(reason or "Order entry is switched off.", self.pal.warn)
+        elif self.status.cget("text") == reason:
+            self._say("")
+
     def _buy(self, side: Side) -> None:
+        # The buttons are already disabled, but a preset click or a stray key
+        # binding must not find a second way in.
+        if not self.app.trading_enabled:
+            self._say(self.app.suspension_note or
+                      "Order entry is switched off.", self.pal.warn)
+            return
         if not self.ticker:
             self._say("This market is between windows.", self.pal.text_faint)
             return
@@ -149,7 +168,8 @@ class CoinCard(Card):
         inst = app.instrument_for(self.code)
         if inst is None:
             self.ticker = None
-            self._say("Waiting for the next window.")
+            if app.trading_enabled:
+                self._say("Waiting for the next window.")
             return
         self.ticker = inst.ticker
 
@@ -210,6 +230,12 @@ class MainWindow(tk.Tk):
         self.snapshot = None
         self._instruments = {}
         self.cards: dict[str, CoinCard] = {}
+        self.trading_enabled = True
+        self.suspension_note = ""
+        # Set when the customer asks to come back in another mode. `app.main`
+        # reads it after the window closes and reopens there.
+        self.restart_mode: Optional[str] = None
+        self.watch = EntitlementWatch(entitlement) if entitlement else None
 
         self.title(f"FIRE {VERSION}")
         self.configure(bg=self.pal.ground)
@@ -218,6 +244,11 @@ class MainWindow(tk.Tk):
 
         self._build_chrome()
         self._build_grid()
+        self._apply_trading_state()
+        # Only live sessions need the periodic check. In demo there is no order
+        # to lose and no reason to keep a thread awake.
+        if self.watch and self.session.is_live:
+            self.watch.start()
         self.after(200, self._tick)
 
     # -- chrome ------------------------------------------------------------
@@ -270,6 +301,22 @@ class MainWindow(tk.Tk):
             bg=banner_bg, fg="#FFFFFF", font=Font.label, pady=6)
         self.banner.pack(fill="x")
 
+        # Shown only when order entry has been switched off. It carries the
+        # reason and both ways out, so the customer is never just stuck.
+        self.lapse_bar = tk.Frame(self, bg=p.panel_hi)
+        row = tk.Frame(self.lapse_bar, bg=p.panel_hi)
+        row.pack(fill="x", padx=Space.lg, pady=Space.sm)
+        self.lapse_msg = tk.Label(row, text="", bg=p.panel_hi, fg=p.warn,
+                                  font=Font.small, anchor="w", justify="left",
+                                  wraplength=900)
+        self.lapse_msg.pack(side="left", fill="x", expand=True)
+        FlatButton(row, "Switch to demo mode", self._switch_to_demo, p,
+                   bg=p.panel, fg=p.text_dim, hover=p.rule,
+                   font=Font.small, pady=6).pack(side="right", padx=(Space.sm, 0))
+        FlatButton(row, "Manage subscription", self._open_account, p,
+                   bg=p.accent, fg="#12171E", hover=p.accent,
+                   font=Font.small, pady=6).pack(side="right")
+
     def _build_grid(self) -> None:
         p = self.pal
         wrap = tk.Frame(self, bg=p.ground)
@@ -308,6 +355,8 @@ class MainWindow(tk.Tk):
             for card in self.cards.values():
                 card.refresh(now)
             self._refresh_chrome()
+            if self.watch and self.watch.take_transition():
+                self._apply_trading_state()
         except FireError as exc:
             self.footer.configure(text=f"{exc.title}. {exc.remedy}",
                                   fg=self.pal.warn)
@@ -332,7 +381,7 @@ class MainWindow(tk.Tk):
         colour, text = colours.get(state, (p.text_faint, "unknown"))
         self.conn_lbl.configure(text=f"● {text}", fg=colour)
 
-        ent = self.session.entitlement()
+        ent = self.watch.latest() if self.watch else self.session.entitlement()
         if ent:
             tone = p.warn if ent.is_warning else p.text_faint
             label = {
@@ -343,6 +392,59 @@ class MainWindow(tk.Tk):
                 EntitlementStatus.UNLICENSED: "No licence",
             }.get(ent.status, "")
             self.ent_lbl.configure(text=label, fg=tone)
+
+    # -- entitlement -------------------------------------------------------
+    def _apply_trading_state(self) -> None:
+        """Switch order entry on or off to match the subscription.
+
+        Called at startup and whenever the watch reports a change, so the
+        customer sees the state before they click, not after.
+        """
+        ent = self.watch.latest() if self.watch else self.session.entitlement()
+        allowed = trading_allowed(self.session.mode, ent)
+        note = "" if allowed else suspension_reason(self.session.mode, ent)
+        brief = "" if allowed else short_suspension_reason(self.session.mode, ent)
+        if allowed == self.trading_enabled and note == self.suspension_note:
+            return
+        self.trading_enabled, self.suspension_note = allowed, note
+
+        # The card gets the short version; the bar across the top carries the
+        # full explanation and the two ways out.
+        for card in self.cards.values():
+            card.set_trading_enabled(allowed, brief)
+
+        if allowed:
+            self.lapse_bar.pack_forget()
+        else:
+            self.lapse_msg.configure(text=note)
+            self.lapse_bar.pack(fill="x", after=self.banner)
+        self._refresh_chrome()
+
+    def entitlement_changed(self) -> None:
+        """Called after the customer redeems or refreshes a licence, so the
+        terminal reflects it immediately instead of on the next poll."""
+        if self.watch:
+            self.watch.poll_once()
+            self.watch.take_transition()      # already handled here
+        self._apply_trading_state()
+        self._refresh_chrome()
+
+    def _switch_to_demo(self) -> None:
+        """Reopen in demo. Never automatic: a simulated balance appearing where
+        a real one was is the kind of thing that gets someone hurt."""
+        if self.session.is_live:
+            ok = messagebox.askokcancel(
+                "Switch to demo mode",
+                "FIRE will reopen with a simulated account.\n\n"
+                "Any real positions you hold stay open at the exchange. FIRE "
+                "will not close them and will not show them while in demo "
+                "mode. Manage them from your exchange account.",
+                parent=self)
+            if not ok:
+                return
+        self.prefs.last_mode = "demo"
+        self.restart_mode = VenueMode.DEMO
+        self.on_close()
 
     # -- order flow --------------------------------------------------------
     def place_order(self, card: CoinCard, ticker: str, side: Side,
@@ -414,7 +516,8 @@ class MainWindow(tk.Tk):
             pass
 
     def on_close(self) -> None:
-        self.prefs.default_stake = self.prefs.default_stake
+        if self.watch:
+            self.watch.stop()
         save_prefs(self.prefs)
         self.session.disconnect()
         self.destroy()

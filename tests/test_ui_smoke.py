@@ -166,3 +166,64 @@ def test_a_bad_stake_entry_is_reported_not_raised(app):
     card._buy(__import__("fire.core.models", fromlist=["Side"]).Side.YES)
     app.update()
     assert "dollars" in card.status.cget("text").lower()
+
+
+# -- a lapsed subscription -------------------------------------------------
+def test_a_lapse_switches_order_entry_off_before_anyone_clicks(app):
+    """The customer must see the state on the card, not discover it from a
+    rejected order. Uses the shared window and puts it back afterwards."""
+    from fire.core.models import Side
+    from fire.interfaces.entitlement import Entitlement, EntitlementStatus
+
+    card = _primed_card(app)
+    before = app.session.account.snapshot().balance_dollars
+    original = app.watch.latest()
+    try:
+        # Revoked is the one state that stops demo too, which is what makes
+        # this reachable from a demo session at all.
+        app.watch._latest = Entitlement(EntitlementStatus.REVOKED, None, "FIRE")
+        app._apply_trading_state()
+        app.update()
+
+        assert not app.trading_enabled
+        assert not card.buy_yes._enabled and not card.buy_no._enabled
+        # withdrawn window: ask the geometry manager, not the screen
+        assert app.lapse_bar.winfo_manager() == "pack"
+        assert "withdrawn" in app.lapse_msg.cget("text")
+        # the card says it briefly, the bar says it fully
+        assert len(card.status.cget("text")) <= 28
+
+        # and the button is not the only thing standing in the way
+        card._buy(Side.YES)
+        app.update()
+        assert app.session.account.snapshot().balance_dollars == before
+    finally:
+        app.watch._latest = original
+        app._apply_trading_state()
+        app.update()
+
+    assert app.trading_enabled
+    assert app.lapse_bar.winfo_manager() == ""
+    assert card.buy_yes._enabled
+
+
+def test_renewing_from_the_account_window_brings_the_buttons_back(app):
+    """The whole point of the licence box is that it unblocks you in place."""
+    from fire.interfaces.entitlement import Entitlement, EntitlementStatus
+    from fire.ui.account_window import AccountWindow
+
+    app.watch._latest = Entitlement(EntitlementStatus.REVOKED, None, "FIRE")
+    app._apply_trading_state()
+    app.update()
+    assert not app.trading_enabled
+
+    win = AccountWindow(app)
+    win.update()
+    win.key_entry.insert(0, "FIRE-TEST-0000-0001")
+    win._redeem()
+    win.update()
+    app.update()
+    win.destroy()
+
+    assert app.trading_enabled, "a redeemed licence must re-enable order entry"
+    assert app.lapse_bar.winfo_manager() == ""

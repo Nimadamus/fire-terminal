@@ -57,6 +57,43 @@ def choose_mode(prefs, requested: str | None = None) -> str:
     return VenueMode.DEMO
 
 
+def _run(mode: str, prefs) -> str | None:
+    """Open the terminal in one mode. Returns a mode to reopen in, or None."""
+    try:
+        session = build_session(mode)
+    except FireError as exc:
+        # Live is unavailable (no approved endpoint, or no credentials saved).
+        # Demo always works, so fall back rather than refusing to start.
+        logging.getLogger("fire").warning(
+            "live venue unavailable (%s), falling back to demo",
+            type(exc).__name__)
+        session = build_session(VenueMode.DEMO)
+
+    session.connect()
+
+    from fire.ui.main_window import MainWindow
+    window = MainWindow(session, prefs, session._entitlement)
+
+    # Uncaught errors are written locally, scrubbed, and never shown raw.
+    from fire.diagnostics import crash
+    crash.install(on_crash=window.report_crash)
+
+    if prefs.check_for_updates:
+        from fire import updates
+        updates.check_in_background(lambda release: None)
+
+    window.protocol("WM_DELETE_WINDOW", window.on_close)
+    window.mainloop()
+
+    next_mode = window.restart_mode
+    try:
+        window.destroy()
+    except Exception:
+        pass
+    session.disconnect()
+    return next_mode
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     requested = None
@@ -80,30 +117,11 @@ def main(argv: list[str] | None = None) -> int:
 
     mode = choose_mode(prefs, requested)
 
-    try:
-        session = build_session(mode)
-    except FireError as exc:
-        # Live is unavailable (no approved endpoint, or no credentials saved).
-        # Demo always works, so fall back rather than refusing to start.
-        logging.getLogger("fire").warning(
-            "live venue unavailable (%s), falling back to demo",
-            type(exc).__name__)
-        session = build_session(VenueMode.DEMO)
-        mode = VenueMode.DEMO
-
-    session.connect()
-
-    from fire.ui.main_window import MainWindow
-    window = MainWindow(session, prefs, session._entitlement)
-
-    # Uncaught errors are written locally, scrubbed, and never shown raw.
-    from fire.diagnostics import crash
-    crash.install(on_crash=window.report_crash)
-
-    if prefs.check_for_updates:
-        from fire import updates
-        updates.check_in_background(lambda release: None)
-
-    window.protocol("WM_DELETE_WINDOW", window.on_close)
-    window.mainloop()
+    # A customer whose subscription lapses can drop to demo without restarting
+    # FIRE by hand. Bounded so a wiring mistake cannot spin here forever.
+    for _ in range(4):
+        mode = _run(mode, prefs)
+        if mode is None:
+            return 0
+        prefs = prefs_module.load()
     return 0

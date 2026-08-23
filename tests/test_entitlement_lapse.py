@@ -142,6 +142,7 @@ def test_the_interval_has_a_floor():
 # -- defence in depth ------------------------------------------------------
 class _Part:
     def __init__(self, mode): self.mode = mode
+    def recent_fills(self, limit=50): return []
 
 
 class FakeLiveVenue:
@@ -176,3 +177,10 @@ def test_an_active_subscription_passes_the_session_gate():
     from fire.core.session import Session
     session = Session(FakeLiveVenue(), VenueMode.LIVE, StubProvider(ACTIVE))
     assert session.execution is not None
+
+
+def test_history_stays_readable_after_a_lapse():
+    """Reading what you already did is not trading."""
+    from fire.core.session import Session
+    session = Session(FakeLiveVenue(), VenueMode.LIVE, StubProvider(EXPIRED))
+    assert session.recent_fills() == []

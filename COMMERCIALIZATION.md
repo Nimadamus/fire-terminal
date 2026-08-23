@@ -274,10 +274,29 @@ and roughly 24 GB of research. None of it exists in this repository.
   support contact, and a release whose licence text still says DRAFT. Both
   proven to block and then to pass.
 
+**Build 8.** Positions and fills in one place.
+
+* The cards answer "what do I hold on the market I am looking at". The new
+  Activity window answers "what do I hold altogether, and what did I actually
+  get filled at", which was the last stated v1 requirement with no surface.
+* Cost and payout sit next to each other, because that is the whole shape of a
+  binary contract. Showing what you paid without what it pays tells half the
+  story.
+* Resting orders are shown even though FIRE's own orders are immediate or
+  cancel and never rest. The count comes from the exchange, so it covers orders
+  placed elsewhere in the same account, and a customer who sees one they did
+  not place from FIRE needs to know about it.
+* **Fill history is deliberately not gated by entitlement.** Reading what you
+  already did is not trading, so a lapsed customer can still see their own
+  record. Enforced by test.
+* The window names the exchange as the authoritative record, and says out loud
+  what it is not showing when the display cap bites. A cap that looks like the
+  whole picture is a lie by omission.
+
 ## 8. Verified state
 
 ```
-234 tests passing, zero skipped
+240 tests passing, zero skipped
 Packaged FIRE.exe builds and launches (31.8 MB, 965 files)
 Installer builds, installs, launches and uninstalls silently (11.7 MB)
 A lapsed subscription disables order entry before anyone can click

@@ -227,3 +227,53 @@ def test_renewing_from_the_account_window_brings_the_buttons_back(app):
 
     assert app.trading_enabled, "a redeemed licence must re-enable order entry"
     assert app.lapse_bar.winfo_manager() == ""
+
+
+# -- activity --------------------------------------------------------------
+def test_activity_window_shows_a_fill_after_an_order(app):
+    from fire.core.models import Side
+    from fire.ui.activity_window import ActivityWindow
+
+    card = _primed_card(app)
+    app.risk.fraction, app.risk.enabled = 1.0, True
+    app.place_order(card, card.ticker, Side.YES, 25.0)
+    app.update()
+
+    win = ActivityWindow(app)
+    win.update()
+    try:
+        texts = [w.cget("text") for w in win.fill_host.winfo_children()]
+        assert len(texts) >= 12, "header row plus at least one fill row" 
+        assert card.ticker in texts
+        assert "no fills yet" not in texts
+        # Risk and reward are shown together, never one without the other.
+        summary = win.summary.cget("text")
+        assert "At risk" in summary and "Pays" in summary
+        # And the exchange, not FIRE, is named as the record of truth.
+        assert "authoritative" in win.note.cget("text")
+    finally:
+        win._on_close()
+
+
+def test_activity_window_says_what_it_is_not_showing(app):
+    """A cap that looks like the whole picture is a lie by omission."""
+    from fire.core.models import Side
+    from fire.ui import activity_window
+    from fire.ui.activity_window import ActivityWindow
+
+    # Do not lean on a fill left behind by another test.
+    card = _primed_card(app)
+    app.risk.fraction, app.risk.enabled = 1.0, True
+    app.place_order(card, card.ticker, Side.YES, 25.0)
+    app.update()
+
+    win = ActivityWindow(app)
+    original = activity_window.MAX_FILLS
+    try:
+        activity_window.MAX_FILLS = 0
+        win.refresh()
+        win.update()
+        assert "Not shown here" in win.note.cget("text")
+    finally:
+        activity_window.MAX_FILLS = original
+        win._on_close()

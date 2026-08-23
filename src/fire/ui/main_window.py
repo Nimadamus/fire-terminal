@@ -273,6 +273,9 @@ class MainWindow(tk.Tk):
                                 font=Font.small, cursor="hand2")
         self.ent_lbl.pack(side="right", padx=(Space.md, 0))
         self.ent_lbl.bind("<Button-1>", lambda _e: self._open_account())
+        FlatButton(right, "Activity", self._open_activity, p,
+                   bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
+                   font=Font.small, pady=5).pack(side="right", padx=4)
         FlatButton(right, "Diagnostics", self._open_diagnostics, p,
                    bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
                    font=Font.small, pady=5).pack(side="right", padx=4)
@@ -497,6 +500,10 @@ class MainWindow(tk.Tk):
     def _open_preferences(self) -> None:
         from fire.ui.preferences_window import PreferencesWindow
         PreferencesWindow(self)
+
+    def _open_activity(self) -> None:
+        from fire.ui.activity_window import ActivityWindow
+        ActivityWindow(self)
 
     def _open_account(self) -> None:
         from fire.ui.account_window import AccountWindow

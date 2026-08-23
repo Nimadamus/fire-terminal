@@ -73,6 +73,17 @@ class Session:
             self._require_entitlement()
         return ex
 
+    def recent_fills(self, limit: int = 50):
+        """Fill history, deliberately NOT gated by entitlement.
+
+        Reading what you already did is not trading. A customer whose
+        subscription lapsed must still be able to see their own history, the
+        same way `account` stays readable. Mode integrity is still enforced.
+        """
+        ex = self._venue.execution
+        self._guard(ex)
+        return ex.recent_fills(limit)
+
     @property
     def account(self) -> AccountAdapter:
         ac = self._venue.account

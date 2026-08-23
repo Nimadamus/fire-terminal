@@ -71,16 +71,17 @@ a = Analysis(
         'fire.ui.onboarding',
         'fire.ui.preferences_window',
         'fire.ui.diagnostics_window',
-        # Owner viewer path. Absent from a customer build's runtime
-        # anyway, because --view is never passed there.
-        'fire.venues.cloud.venue',
-        'winrm',
     ],
     hookspath=[],
     runtime_hooks=[],
     # Keep the bundle small and the surface honest. None of these are used by
     # the customer application.
     excludes=[
+        # The viewer talks to a machine only we own, over credentials only we
+        # have. It has no business in a customer's copy and the release gate
+        # fails a build that contains it.
+        'fire.venues.cloud', 'fire.venues.cloud.venue',
+        'fire.venues.cloud.bridge', 'winrm', 'xmltodict', 'requests_ntlm',
         'numpy', 'pandas', 'scipy', 'matplotlib', 'IPython', 'jupyter',
         'notebook', 'pytest', 'setuptools', 'pip', 'sqlite3', 'test',
         'unittest', 'pydoc_data', 'lib2to3', 'distutils',

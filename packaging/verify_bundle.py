@@ -155,6 +155,18 @@ def main(argv: list[str]) -> int:
 
     # Preferences links to this. A build that ships without it hands the
     # customer a dead button on the day their laptop goes missing.
+    # The owner viewer reaches a machine only we control, using credentials
+    # only we hold. A customer build carrying it would ship both.
+    for banned in (b"3.224.38.193", b"firebridge", b"fire.venues.cloud",
+                   b"CREDENTIALS.md"):
+        for path in files:
+            try:
+                if banned in path.read_bytes():
+                    fail(f"owner viewer material in bundle: "
+                         f"{banned.decode()} in {path.relative_to(root)}")
+            except OSError:
+                continue
+
     for shipped in ("CREDENTIALS.md", "TROUBLESHOOTING.md"):
         if not list(root.glob(f"**/docs/{shipped}")):
             fail(f"docs/{shipped} is missing from the bundle")

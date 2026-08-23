@@ -19,6 +19,31 @@ from fire.interfaces.venue import VenueMode
 from fire.ui.theme import Font, Space, palette
 from fire.ui.widgets import FlatButton, hrule
 
+# Bump this when the risk disclosure or licence terms change materially.
+# Everyone is then re-prompted, because changed terms need fresh consent.
+TERMS_VERSION = "2026-08-1"
+
+# Each is a separate statement so the customer acknowledges distinct facts,
+# rather than one blanket tick that means nothing.
+CONSENT_POINTS = (
+    "FIRE places the orders I click. It gives no trading advice, no "
+    "recommendations and no signals, and it does not trade on my behalf.",
+
+    "These contracts settle at either their full value or at nothing. I can "
+    "lose the entire amount I pay for any order, and no limit in FIRE can "
+    "prevent that once an order has filled.",
+
+    "I have my own account with the exchange, I supply my own API key, and I "
+    "am responsible for complying with that exchange's own terms and "
+    "developer agreement.",
+
+    "Software and connections fail. I will confirm my real positions with my "
+    "exchange account, which is the only authoritative record.",
+
+    "I accept the FIRE licence terms, which are provided without warranty and "
+    "with a limit on liability.",
+)
+
 
 class OnboardingWindow(tk.Tk):
     """Runs before the terminal. Returns the mode the customer chose."""
@@ -106,9 +131,57 @@ class OnboardingWindow(tk.Tk):
                             "also do this later at any time.",
                  bg=p.panel, fg=p.text_dim, font=Font.small, anchor="w",
                  justify="left", wraplength=520).pack(fill="x", padx=Space.lg)
-        FlatButton(live, "Set up my account", self._show_credentials, p,
+        FlatButton(live, "Set up my account", self._show_consent, p,
                    bg=p.panel_hi, fg=p.text, hover=p.rule).pack(
                        anchor="w", padx=Space.lg, pady=Space.md)
+
+    # -- step 1b: consent, before any live account is connected ------------
+    def _show_consent(self) -> None:
+        """Shown only on the live path. Demo needs no acknowledgement because
+        no money and no exchange account are involved."""
+        p, box = self.pal, self._clear()
+        self._heading(box, "Before you connect real money",
+                      "Please read these and tick each one. They are separate "
+                      "statements rather than one blanket agreement, because "
+                      "they cover different things.")
+
+        self._consent_vars: list[tk.BooleanVar] = []
+        wrap = tk.Frame(box, bg=p.ground)
+        wrap.pack(fill="both", expand=True, pady=Space.md)
+        for point in CONSENT_POINTS:
+            var = tk.BooleanVar(value=False)
+            self._consent_vars.append(var)
+            row = tk.Frame(wrap, bg=p.panel)
+            row.pack(fill="x", pady=2)
+            tk.Checkbutton(row, variable=var, bg=p.panel, fg=p.text,
+                           selectcolor=p.panel_hi, activebackground=p.panel,
+                           highlightthickness=0, borderwidth=0,
+                           command=self._update_consent_button).pack(
+                               side="left", padx=(Space.sm, 0), anchor="n")
+            tk.Label(row, text=point, bg=p.panel, fg=p.text_dim,
+                     font=Font.small, anchor="w", justify="left",
+                     wraplength=520).pack(side="left", padx=Space.sm,
+                                          pady=Space.sm, fill="x", expand=True)
+
+        row = tk.Frame(box, bg=p.ground)
+        row.pack(fill="x", side="bottom")
+        FlatButton(row, "Back", self._show_welcome, p, bg=p.panel_hi,
+                   fg=p.text_dim, hover=p.rule).pack(side="left")
+        self._consent_btn = FlatButton(row, "I agree, continue",
+                                       self._accept_consent, p, bg=p.accent,
+                                       fg="#12171E", hover=p.accent)
+        self._consent_btn.pack(side="right")
+        self._consent_btn.set_enabled(False)
+
+    def _update_consent_button(self) -> None:
+        self._consent_btn.set_enabled(all(v.get() for v in self._consent_vars))
+
+    def _accept_consent(self) -> None:
+        if not all(v.get() for v in self._consent_vars):
+            return
+        self.prefs.accepted_terms_version = TERMS_VERSION
+        save_prefs(self.prefs)
+        self._show_credentials()
 
     # -- step 2: credentials ----------------------------------------------
     def _show_credentials(self) -> None:

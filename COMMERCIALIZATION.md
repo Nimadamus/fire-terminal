@@ -3,7 +3,8 @@
 Running record of architecture, decisions, what was removed, what is still
 blocked, and the launch checklist. Updated as work proceeds.
 
-**Status:** v1 skeleton complete, demo path working end to end, 119 tests green.
+**Status:** v1 feature complete for demo. Live adapter written and tested but
+unwired pending authorization. 205 tests green, zero skipped.
 **Not shipped. Not launched. No distribution permission yet.** See
 [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
 
@@ -41,8 +42,9 @@ credential shaped.
                      |
         +------------+------------+
         |                         |
-   DemoVenue                 KalshiVenue
-   (no network at all)       (not implemented yet)
+   DemoVenue                 LiveVenue
+   (no network at all)       (written, tested, UNWIRED:
+                              endpoints.ACTIVE is UNCONFIGURED)
 ```
 
 Supporting layers, all independent of venue:
@@ -55,7 +57,8 @@ Supporting layers, all independent of venue:
 | Credentials | `config/credentials.py` | DPAPI backed, purpose built, never plaintext |
 | Preferences | `config/prefs.py` | local JSON, nothing secret |
 | Entitlement | `interfaces/entitlement.py` + `entitlement/local.py` | one seam for billing |
-| Diagnostics | `diagnostics/redact.py`, `bundle.py` | redaction at the write boundary |
+| Diagnostics | `diagnostics/redact.py`, `bundle.py`, `crash.py` | redaction at the write boundary |
+| Updates | `updates.py` | non blocking, anonymous, disabled without a feed |
 
 ### The venue interface carries no strategy surface
 
@@ -95,9 +98,9 @@ isolate, delete.
 | Internal | Commercial replacement | State |
 |---|---|---|
 | `kalshi_risk_cap.py` (49 KB, fixed house fraction, multi runner) | `risk/limits.py` (2 KB, one account, customer configurable) | **done** |
-| `kalshi_live_order.py` (the coupling hub) | `interfaces/venue.py` + per venue execution | interface done, live impl pending |
+| `kalshi_live_order.py` (the coupling hub) | `interfaces/venue.py` + per venue execution + shared `core/planning.py` | **done**, unwired by design |
 | `fire_interlock.py`, `shared_book.py`, `market_claim.py` | not reproduced. Single customer, single app, no arbitration needed. | **dropped by design** |
-| `fortress_owner.py`, `fire_supervisor.py` | a simple single instance check, when needed | pending |
+| `fortress_owner.py`, `fire_supervisor.py` | a simple single instance check, when needed | not needed yet |
 | `fire_render_log.py` | plain redacted app log, no valuation fields | **done** (`app.py` logging) |
 
 ### Isolate behind a server (deferred, and probably never needed)
@@ -209,10 +212,25 @@ and roughly 24 GB of research. None of it exists in this repository.
   the layer that catches a renamed attribute or a dead callback, which the
   other suites cannot see.
 
+**Build 5.** Consent gating.
+
+* The live path now requires explicit acknowledgement before credentials are
+  even requested: five separate statements covering no advice, total loss,
+  responsibility for the customer's own exchange terms and developer
+  agreement, software failure, and the licence. Continue stays disabled until
+  every one is ticked.
+* Five separate statements rather than one blanket tick, because a single
+  "I agree to everything" box is not meaningful consent to distinct facts.
+* **The demo path requires none of it**, and a test enforces that. Putting a
+  wall of legal tickboxes in front of a free trial costs customers and
+  protects nobody, since no money and no exchange account are involved.
+* `accepted_terms_version` is recorded, so bumping `TERMS_VERSION` re-prompts
+  everyone. Changed terms need fresh consent rather than silent drift.
+
 ## 8. Verified state
 
 ```
-198 tests passing, zero skipped
+205 tests passing, zero skipped
 Packaged FIRE.exe builds and launches (31.8 MB, 963 files)
 Every window builds and tears down under test
 Risk limit proven to block an oversized order through the real UI path

@@ -18,6 +18,11 @@ class Preferences:
     last_mode: str = "demo"                  # demo | live
     onboarding_complete: bool = False
 
+    # Which version of the risk disclosure and licence terms was accepted.
+    # Empty means never accepted. Bumping TERMS_VERSION re-prompts everyone,
+    # which is the point: changed terms need fresh consent, not silent drift.
+    accepted_terms_version: str = ""
+
     # order entry
     stake_presets: list[float] = field(default_factory=lambda: [25, 100, 250, 500, 1000])
     default_stake: float = 100.0

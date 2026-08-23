@@ -39,7 +39,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 |---|---|---|---|
 | B1 | Every customer supplies their own API key; FIRE ships with none | REQUIRED | **Done**, enforced by test |
 | B2 | Credentials stored via OS secret store, never plaintext | REQUIRED | **Done** (DPAPI) |
-| B3 | Each customer accepts the exchange developer agreement themselves | REQUIRED | Needs onboarding step |
+| B3 | Each customer accepts the exchange developer agreement themselves | REQUIRED | **Done**, explicit acknowledgement before credentials, gated by test |
 | B4 | Confirm whether the exchange requires per-application registration | **OPEN** | Ask in A1 |
 | B5 | Credential revocation and rotation path documented for customers | REQUIRED | Partly done: Preferences can remove saved credentials; customer facing doc still needed |
 
@@ -90,7 +90,7 @@ scrutiny of the automated system, which is not what is being sold.
 | # | Item | Type | State |
 |---|---|---|---|
 | G1 | EULA with no warranty and a liability cap | REQUIRED | **Drafted** (`docs/LEGAL.md`), needs legal review |
-| G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | **Drafted**, needs legal review and a setup screen |
+| G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | **Shown in setup** before any live account connects; wording still needs legal review |
 | G3 | Privacy policy covering what FIRE stores and where | REQUIRED | **Drafted**, needs legal review |
 | G4 | Refund and cancellation terms | REQUIRED | **Drafted** (14 day full refund), needs legal review |
 | G5 | Support channel and response expectation | REQUIRED | Not started |

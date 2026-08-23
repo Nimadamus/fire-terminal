@@ -285,8 +285,15 @@ class MainWindow(tk.Tk):
         self.title(f"FIRE {VERSION}")
         _set_window_icon(self)
         self.configure(bg=self.pal.ground)
-        self.geometry("1400x900")
-        self.minsize(920, 620)
+        self.geometry("1600x950")
+        self.minsize(1000, 660)
+        # Open maximised: eight live markets at a readable size need the room,
+        # and a window that opens too small to read is the first thing anyone
+        # notices.
+        try:
+            self.state("zoomed")
+        except Exception:
+            pass
 
         self._build_chrome()
         self._build_grid()

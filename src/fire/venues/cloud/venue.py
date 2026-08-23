@@ -20,7 +20,9 @@ from fire.core.models import (
 from fire.interfaces.venue import (
     AccountAdapter, ExecutionVenue, MarketDataSource, Venue, VenueMode,
 )
+from fire.core.models import IndexQuote
 from fire.venues.cloud.bridge import CloudBridge
+from fire.venues.cloud.spot import SpotFeed
 
 
 def _cents(value) -> float:
@@ -122,6 +124,47 @@ def _parse_time(stamp: str) -> float:
         return time.time()
 
 
+class SpotMarketData(MarketDataSource):
+    """The exchange's markets and books, with the underlying price added.
+
+    Kalshi publishes the contract; the INDEX line is the thing it settles
+    against, which comes from the spot feed.
+    """
+
+    def __init__(self, inner: MarketDataSource, spot: SpotFeed) -> None:
+        self._inner = inner
+        self._spot = spot
+
+    @property
+    def mode(self) -> str:
+        return self._inner.mode
+
+    def connection_state(self):
+        return self._inner.connection_state()
+
+    def instruments(self):
+        return self._inner.instruments()
+
+    def book(self, ticker: str):
+        return self._inner.book(ticker)
+
+    def index_quote(self, index_id: str):
+        price = self._spot.price(index_id)
+        if price is None:
+            return None
+        return IndexQuote(index_id=index_id, value=price,
+                          received_epoch=time.time(), source="coinbase")
+
+    def start(self) -> None:
+        self._spot.start()
+        self._inner.start()
+
+    def stop(self) -> None:
+        self._spot.stop()
+        if hasattr(self._inner, "stop"):
+            self._inner.stop()
+
+
 class ViewVenue(Venue):
     """Live prices, live account, no order path."""
 
@@ -173,4 +216,6 @@ def build_view_venue() -> Venue:
     # No signer: markets and order books are public, and this machine holds no
     # key to sign with, which is the entire point.
     transport = Transport(endpoints.ACTIVE, signer=None)
-    return ViewVenue(LiveMarketData(transport, endpoints.ACTIVE), CloudBridge())
+    market_data = SpotMarketData(LiveMarketData(transport, endpoints.ACTIVE),
+                                 SpotFeed())
+    return ViewVenue(market_data, CloudBridge())

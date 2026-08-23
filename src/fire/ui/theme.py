@@ -85,4 +85,4 @@ class Space:
     xs, sm, md, lg, xl = 3, 6, 10, 16, 24
 
 
-CARD_W, CARD_H = 268, 300
+CARD_W, CARD_H = 330, 340

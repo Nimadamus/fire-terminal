@@ -161,3 +161,31 @@ def test_a_dev_build_is_not_a_release_build():
     from fire import version
     assert version.BUILD_CHANNEL == "dev"
     assert not version.is_release_build()
+
+
+# -- updates ---------------------------------------------------------------
+def test_update_check_is_disabled_without_a_feed():
+    """No feed configured means no network call at all, not a failed one."""
+    from fire import updates
+    assert updates.check("") is None
+    calls = []
+    updates.check_in_background(lambda r: calls.append(r), feed_url="")
+    assert calls == []
+
+
+def test_a_feed_only_reports_something_actually_newer():
+    from fire import updates
+    from fire.version import VERSION
+    doc = updates.parse_feed(
+        '{"stable": {"version": "0.0.1", "url": "https://example.com/x.exe"}}')
+    assert doc["stable"]["version"] == "0.0.1"
+    assert not updates.Release(version="0.0.1").is_newer
+    assert updates.Release(version="99.0.0").is_newer
+    assert not updates.Release(version=VERSION).is_newer
+
+
+def test_version_and_release_names_line_up():
+    """The installer, the tag and the feed all derive from one string."""
+    from fire.version import VERSION
+    assert VERSION.count(".") == 2
+    assert not VERSION.endswith("-dev"), "a shipping build carries no suffix"

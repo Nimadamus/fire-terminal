@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 from fire.diagnostics import bundle
+from fire.ui.helpers import open_shipped_doc
 from fire.version import support_contact
 from fire.ui.theme import Font, Space
 from fire.ui.widgets import FlatButton, hrule
@@ -57,6 +58,9 @@ class DiagnosticsWindow(tk.Toplevel):
         actions.pack(fill="x", pady=Space.md)
         FlatButton(actions, "Create support bundle", self._create, p,
                    bg=p.accent, fg="#12171E", hover=p.accent).pack(side="left")
+        FlatButton(actions, "Troubleshooting", self._open_guide, p,
+                   bg=p.panel_hi, fg=p.text_dim,
+                   hover=p.rule).pack(side="left", padx=Space.sm)
         FlatButton(actions, "Close", self.destroy, p, bg=p.panel_hi,
                    fg=p.text_dim, hover=p.rule).pack(side="right")
 
@@ -64,6 +68,11 @@ class DiagnosticsWindow(tk.Toplevel):
                                font=Font.small, anchor="w", wraplength=660,
                                justify="left")
         self.status.pack(fill="x")
+
+    def _open_guide(self) -> None:
+        """Answers to the common problems, shipped with the app so they work
+        when the customer has no connection and cannot reach a web page."""
+        open_shipped_doc(self, "TROUBLESHOOTING.md", self.status)
 
     def _load_report(self) -> None:
         try:

@@ -1,14 +1,12 @@
 """Preferences. Everything the customer is allowed to change, in one place."""
 from __future__ import annotations
 
-import os
-import sys
 import tkinter as tk
-import webbrowser
 from tkinter import messagebox
 
 from fire.config.credentials import CredentialStore
 from fire.config.prefs import save as save_prefs
+from fire.ui.helpers import open_shipped_doc
 from fire.ui.theme import Font, Space
 from fire.ui.widgets import FlatButton, hrule
 
@@ -177,21 +175,7 @@ class PreferencesWindow(tk.Toplevel):
                            fg=self.pal.good)
 
     def _open_key_doc(self) -> None:
-        from fire.config.paths import resource
-        path = resource("CREDENTIALS.md")
-        if path is None:
-            self.msg.configure(
-                text="That guide is missing from this installation. "
-                     "Reinstall FIRE to restore it.", fg=self.pal.warn)
-            return
-        try:
-            if sys.platform == "win32":
-                os.startfile(str(path))            # noqa: S606
-            else:
-                webbrowser.open(path.as_uri())
-        except Exception:
-            self.msg.configure(text=f"Open this file to read it: {path}",
-                               fg=self.pal.text_dim)
+        open_shipped_doc(self, "CREDENTIALS.md", self.msg)
 
     def _save(self) -> None:
         try:
@@ -233,8 +217,19 @@ class PreferencesWindow(tk.Toplevel):
         self.app.risk.enabled = prefs.max_loss_enabled
 
         if theme_changed or layout_changed:
-            self.msg.configure(
-                text="Saved. Restart FIRE to apply the theme and layout changes.",
-                fg=self.pal.text_dim)
+            # Telling a customer to restart the program is a developer
+            # instruction. Offer to do it for them, in the mode they are
+            # already in, and let them decline.
+            self.msg.configure(text="Saved. Reload to apply the new look?",
+                               fg=self.pal.text_dim)
+            FlatButton(self.msg.master, "Reload now", self._reload,
+                       self.pal, bg=self.pal.accent, fg="#12171E",
+                       hover=self.pal.accent, font=Font.small,
+                       pady=6).pack(side="right", padx=Space.sm)
         else:
             self.destroy()
+
+    def _reload(self) -> None:
+        self.app.restart_mode = self.app.session.mode
+        self.destroy()
+        self.app.on_close()

@@ -130,6 +130,12 @@ def main(argv: list[str]) -> int:
                 fail("release build has no support contact (fire/version.py)")
         except Exception:
             fail("release build could not resolve a support contact")
+        # A release with no licence service cannot be charged for: every
+        # install would quietly fall back to a local trial.
+        if not (getattr(ver, "LICENCE_API_URL", "") and
+                getattr(ver, "LICENCE_PUBLIC_KEY", "")):
+            fail("release build has no licence service configured "
+                 "(LICENCE_API_URL / LICENCE_PUBLIC_KEY in fire/version.py)")
         # Shipping a licence that still says DRAFT invites exactly the argument
         # the licence exists to prevent.
         repo_licence = Path(__file__).resolve().parents[1] / "docs" / "LICENSE.txt"
@@ -149,8 +155,9 @@ def main(argv: list[str]) -> int:
 
     # Preferences links to this. A build that ships without it hands the
     # customer a dead button on the day their laptop goes missing.
-    if not list(root.glob("**/docs/CREDENTIALS.md")):
-        fail("docs/CREDENTIALS.md is missing from the bundle")
+    for shipped in ("CREDENTIALS.md", "TROUBLESHOOTING.md"):
+        if not list(root.glob(f"**/docs/{shipped}")):
+            fail(f"docs/{shipped} is missing from the bundle")
     size_mb = sum(p.stat().st_size for p in files) / (1024 * 1024)
     if size_mb > MAX_BUNDLE_MB:
         fail(f"bundle is {size_mb:.0f} MB, over the {MAX_BUNDLE_MB} MB ceiling")

@@ -38,8 +38,22 @@ def _setup_logging() -> None:
     logging.getLogger("fire").info("FIRE %s starting", VERSION)
 
 
+def build_entitlement():
+    """The licence service if this build has one, a local trial if not.
+
+    This is the only place that decides. Everything above it sees one
+    interface, so connecting billing changed no other file.
+    """
+    from fire.version import LICENCE_API_URL, LICENCE_PUBLIC_KEY
+    if LICENCE_API_URL and LICENCE_PUBLIC_KEY:
+        from fire.entitlement.remote import RemoteEntitlement
+        return RemoteEntitlement(LICENCE_API_URL,
+                                 LICENCE_PUBLIC_KEY.encode("ascii"))
+    return LocalEntitlement()
+
+
 def build_session(mode: str) -> Session:
-    entitlement = LocalEntitlement()
+    entitlement = build_entitlement()
     if mode == VenueMode.LIVE:
         from fire.venues.kalshi.venue import build_live_venue
         venue = build_live_venue(CredentialStore())
@@ -80,7 +94,7 @@ def _run(mode: str, prefs) -> str | None:
 
     if prefs.check_for_updates:
         from fire import updates
-        updates.check_in_background(lambda release: None)
+        updates.check_in_background(window.offer_update)
 
     window.protocol("WM_DELETE_WINDOW", window.on_close)
     window.mainloop()

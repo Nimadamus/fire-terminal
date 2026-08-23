@@ -1,0 +1,34 @@
+# Deployment for the FIRE licence service.
+#
+# Everything secret is set in the Render dashboard, not here. This file is in
+# the repository, so nothing in it may be a credential.
+services:
+  - type: web
+    name: fire-licence
+    runtime: python
+    plan: starter
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: FIRE_SIGNING_KEY
+        sync: false          # set by hand, never committed
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_ANNUAL
+        sync: false
+      - key: FIRE_SITE_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fire-licences
+          property: connectionString
+
+databases:
+  - name: fire-licences
+    plan: basic-256mb

@@ -102,7 +102,7 @@ class OnboardingWindow(tk.Tk):
         self._bullet(box, "Every open market on one screen, with live prices and depth.")
         self._bullet(box, "One click to buy either side, with the limit taken from the book.")
         self._bullet(box, "A maximum loss ceiling you set, checked before every order.")
-        self._bullet(box, "Your API key stays on this computer. FIRE has no server.")
+        self._bullet(box, "Your API key stays on this computer and is never sent to us.")
 
         hrule(box, p, pad=Space.lg)
 

@@ -1,7 +1,14 @@
 """Single source of version truth for the app, the packager and update checks."""
 from __future__ import annotations
 
-VERSION = "1.0.0-dev"
+# Release naming, so every artefact lines up:
+#   VERSION        1.0.0            semantic, no suffix on a shipping build
+#   git tag        v1.0.0
+#   installer      FIRE-1.0.0-setup.exe
+#   feed channel   BUILD_CHANNEL below
+# Bump patch for fixes, minor for features, major for anything that changes
+# how a customer works. The installer upgrades in place at every level.
+VERSION = "1.0.0"
 BUILD_CHANNEL = "dev"          # dev | beta | stable
 UPDATE_FEED_URL = ""           # set when a release feed exists; empty disables checks
 
@@ -10,6 +17,13 @@ UPDATE_FEED_URL = ""           # set when a release feed exists; empty disables 
 # anywhere is not support.
 SUPPORT_EMAIL = ""
 SUPPORT_URL = ""
+
+# The licence service. Both must be set on a release build, otherwise FIRE
+# falls back to a local trial and there is nothing to charge for.
+# LICENCE_PUBLIC_KEY is the base64 raw Ed25519 public key printed by
+# server/make_keys.py. The matching private key never leaves the server.
+LICENCE_API_URL = ""
+LICENCE_PUBLIC_KEY = ""
 
 
 def support_contact() -> str:

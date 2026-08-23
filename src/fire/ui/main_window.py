@@ -236,6 +236,10 @@ class MainWindow(tk.Tk):
         # reads it after the window closes and reopens there.
         self.restart_mode: Optional[str] = None
         self.watch = EntitlementWatch(entitlement) if entitlement else None
+        # Set from the update thread, read on the UI tick. Widgets are only
+        # ever touched from the main thread.
+        self._pending_update = None
+        self._update_shown = False
 
         self.title(f"FIRE {VERSION}")
         self.configure(bg=self.pal.ground)
@@ -304,6 +308,22 @@ class MainWindow(tk.Tk):
             bg=banner_bg, fg="#FFFFFF", font=Font.label, pady=6)
         self.banner.pack(fill="x")
 
+        # A new version is worth one quiet line, never a dialog that
+        # interrupts someone mid window.
+        self.update_bar = tk.Frame(self, bg=p.panel_hi)
+        urow = tk.Frame(self.update_bar, bg=p.panel_hi)
+        urow.pack(fill="x", padx=Space.lg, pady=Space.sm)
+        self.update_msg = tk.Label(urow, text="", bg=p.panel_hi, fg=p.text_dim,
+                                   font=Font.small, anchor="w", justify="left",
+                                   wraplength=900)
+        self.update_msg.pack(side="left", fill="x", expand=True)
+        FlatButton(urow, "Not now", self._dismiss_update, p,
+                   bg=p.panel, fg=p.text_faint, hover=p.rule,
+                   font=Font.small, pady=6).pack(side="right", padx=(Space.sm, 0))
+        FlatButton(urow, "Get the update", self._download_update, p,
+                   bg=p.accent, fg="#12171E", hover=p.accent,
+                   font=Font.small, pady=6).pack(side="right")
+
         # Shown only when order entry has been switched off. It carries the
         # reason and both ways out, so the customer is never just stuck.
         self.lapse_bar = tk.Frame(self, bg=p.panel_hi)
@@ -360,6 +380,7 @@ class MainWindow(tk.Tk):
             self._refresh_chrome()
             if self.watch and self.watch.take_transition():
                 self._apply_trading_state()
+            self._show_update_if_any()
         except FireError as exc:
             self.footer.configure(text=f"{exc.title}. {exc.remedy}",
                                   fg=self.pal.warn)
@@ -431,6 +452,34 @@ class MainWindow(tk.Tk):
             self.watch.take_transition()      # already handled here
         self._apply_trading_state()
         self._refresh_chrome()
+
+    # -- updates -----------------------------------------------------------
+    def offer_update(self, release) -> None:
+        """Called from the update thread. Records only; the tick renders it."""
+        self._pending_update = release
+
+    def _show_update_if_any(self) -> None:
+        release = self._pending_update
+        if release is None or self._update_shown:
+            return
+        self._update_shown = True
+        notes = f"  {release.notes}" if release.notes else ""
+        self.update_msg.configure(
+            text=f"FIRE {release.version} is available.{notes}"
+                 "  Your settings and your saved key are kept.")
+        self.update_bar.pack(fill="x", after=self.banner)
+
+    def _download_update(self) -> None:
+        release = self._pending_update
+        url = getattr(release, "url", "") if release else ""
+        if url:
+            import webbrowser
+            webbrowser.open(url)
+        self._dismiss_update()
+
+    def _dismiss_update(self) -> None:
+        self._pending_update = None
+        self.update_bar.pack_forget()
 
     def _switch_to_demo(self) -> None:
         """Reopen in demo. Never automatic: a simulated balance appearing where

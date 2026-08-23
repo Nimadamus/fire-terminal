@@ -277,3 +277,37 @@ def test_activity_window_says_what_it_is_not_showing(app):
     finally:
         activity_window.MAX_FILLS = original
         win._on_close()
+
+
+# -- updates ---------------------------------------------------------------
+def test_an_available_update_is_one_quiet_line_not_a_dialog(app):
+    """Interrupting someone mid window with a modal is unacceptable."""
+    from fire.updates import Release
+
+    assert app.update_bar.winfo_manager() == ""
+    app.offer_update(Release(version="99.0.0", url="https://example.com/x.exe",
+                             notes="Faster book updates."))
+    app._show_update_if_any()
+    app.update()
+    assert app.update_bar.winfo_manager() == "pack"
+    text = app.update_msg.cget("text")
+    assert "99.0.0" in text and "Faster book updates." in text
+    # It must promise what a customer actually worries about before updating.
+    assert "settings" in text and "key are kept" in text
+
+    app._dismiss_update()
+    app.update()
+    assert app.update_bar.winfo_manager() == ""
+
+
+def test_offer_update_touches_no_widget_so_a_thread_can_call_it(app):
+    """The check runs on a daemon thread. Only the tick may paint."""
+    from fire.updates import Release
+    app._update_shown = False
+    app.offer_update(Release(version="99.0.0"))
+    assert app.update_bar.winfo_manager() == "", "nothing painted yet"
+    app._show_update_if_any()
+    app.update()
+    assert app.update_bar.winfo_manager() == "pack"
+    app._dismiss_update()
+    app.update()

@@ -293,11 +293,34 @@ and roughly 24 GB of research. None of it exists in this repository.
   what it is not showing when the display cap bites. A cap that looks like the
   whole picture is a lie by omission.
 
+**Build 9.** Everything needed to sell it.
+
+* **Licence service** in `server/`. Ed25519 signed tokens, Stripe webhooks,
+  a seat limit, an offline grace window and a database that holds an email, a
+  plan, a status and an expiry and nothing else. The old `redeem()` accepted
+  any eight characters, which is not a subscription.
+* **Website** in `site/`. Sales page, post checkout welcome page that shows the
+  key the instant the payment clears, an account page that opens Stripe's
+  portal, and six legal pages generated from `docs/LEGAL.md` so the customer
+  facing text and the reviewed text cannot drift apart.
+* **Pricing** decided and argued in `docs/PRICING.md`: $59 monthly, $590
+  annual, a 14 day trial with no card, $39 for the first fifty.
+* **Code signing** researched rather than assumed, and it changed the answer.
+  Since March 2024 EV no longer skips the SmartScreen warning, so it is a poor
+  buy. Azure Artifact Signing at $9.99 a month, no hardware token.
+  `packaging/build.ps1` already signs the executable and then the installer.
+* **Upgrade in place** tested for the first time: one entry in Add or Remove
+  Programs rather than two, same directory, settings and install id intact.
+* **Updates reach the customer.** The callback was previously a no-op, so even
+  with a feed configured nobody would have been told.
+
 ## 8. Verified state
 
 ```
-240 tests passing, zero skipped
-Packaged FIRE.exe builds and launches (31.8 MB, 965 files)
+294 tests passing, zero skipped
+Packaged FIRE.exe builds and launches (31.8 MB, 967 files)
+Installer upgrades 1.0.0 to 1.0.1 in place with customer settings intact
+A forged or edited licence token is refused; an outage is not an expiry
 Installer builds, installs, launches and uninstalls silently (11.7 MB)
 A lapsed subscription disables order entry before anyone can click
 A redeemed licence re-enables it without a restart

@@ -106,3 +106,38 @@ def test_interfaces_expose_no_strategy_surface():
     banned = {"fair_value", "probability", "qualify", "should_trade",
               "select_candidate", "edge", "signal", "score"}
     assert not (methods & banned), f"strategy-shaped methods on the venue interface: {methods & banned}"
+
+
+# -- the licence service ----------------------------------------------------
+SERVER = pathlib.Path(__file__).resolve().parents[1] / "server"
+
+# The service shares exactly one thing with the application: the token format.
+# Anything else would mean the billing backend could reach into trading code.
+SERVER_ALLOWED_FIRE_IMPORTS = {"fire.entitlement.token"}
+
+
+@pytest.mark.parametrize("path", _py_files(SERVER),
+                         ids=lambda p: str(p.relative_to(SERVER)))
+def test_the_service_only_shares_the_token_format(path: pathlib.Path):
+    import ast
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        module = ""
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+        elif isinstance(node, ast.Import):
+            module = node.names[0].name
+        if module.startswith("fire."):
+            assert module in SERVER_ALLOWED_FIRE_IMPORTS, (
+                f"{path.name} imports {module}; the licence service must not "
+                f"reach into the application")
+
+
+@pytest.mark.parametrize("path", _py_files(SERVER),
+                         ids=lambda p: str(p.relative_to(SERVER)))
+def test_the_service_embeds_no_secrets(path: pathlib.Path):
+    """Signing keys and Stripe keys come from the environment, never source."""
+    text = path.read_text(encoding="utf-8")
+    assert "-----BEGIN" not in text, f"{path} contains a PEM block"
+    for marker in ("sk_live_", "sk_test_", "whsec_", "rk_live_"):
+        assert marker not in text, f"{path} contains a Stripe key"

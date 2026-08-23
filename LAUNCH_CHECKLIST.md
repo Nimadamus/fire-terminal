@@ -93,7 +93,7 @@ scrutiny of the automated system, which is not what is being sold.
 | G2 | Risk disclosure: trading can lose money, software can fail | REQUIRED | **Shown in setup** before any live account connects; wording still needs legal review |
 | G3 | Privacy policy covering what FIRE stores and where | REQUIRED | **Drafted**, needs legal review |
 | G4 | Refund and cancellation terms | REQUIRED | **Drafted** (14 day full refund), needs legal review |
-| G5 | Support channel and response expectation | REQUIRED | **Policy written**, `docs/SUPPORT.md`, and the app tells the customer where to send a bundle from one constant. **The address itself is your decision**; the release gate blocks a beta or stable build while it is empty. |
+| G5 | Support channel and response expectation | REQUIRED | **Done bar the address**: policy in `docs/SUPPORT.md`, troubleshooting guide shipped in the build and linked from Diagnostics, and the app names where to send a bundle. The release gate blocks a stable build while the address is empty. |
 | G6 | Business entity in place before taking payment | REQUIRED | **Yours.** Stripe can onboard an individual, so this is not strictly blocking, but the licence agreement's governing law clause stays incomplete without it. |
 
 ## H. Product readiness
@@ -104,7 +104,7 @@ scrutiny of the automated system, which is not what is being sold.
 | H2 | Demo mode usable without any account | REQUIRED | **Done** |
 | H3 | Support bundle redacts secrets, verified | REQUIRED | **Done**, enforced by test |
 | H4 | No stack traces reach the customer | REQUIRED | **Done** |
-| H5 | Signed installer, code signing certificate | REQUIRED | **Installer done**: `FIRE-<version>-setup.exe`, 11.7 MB, per user, no admin prompt, silent install and uninstall verified. **Certificate still needed** and is on you: unsigned means a SmartScreen warning on every first run. |
+| H5 | Signed installer, code signing certificate | REQUIRED | **Installer done and upgrade in place verified.** Signing is wired into the build and skips cleanly with no certificate. **Buy Azure Artifact Signing at $9.99/month**, see `docs/CODE_SIGNING.md`: EV is no longer worth it. |
 | H6 | Update feed and version check | REQUIRED | **Done end to end**: the client checks, the terminal shows one quiet line with a download button, and `packaging/make_feed.py` generates the feed with a checksum. Only the hosting URL is outstanding. |
 | H7 | Crash reporting, sanitized | REQUIRED | **Done**, no locals rendered, credential frames withheld, discarded if not verifiably clean |
 

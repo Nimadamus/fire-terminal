@@ -1,6 +1,16 @@
 /* FIRE marketing site.
-   One stylesheet, no framework, no external requests. The terminal's own
-   palette, so the site and the product look like the same thing. */
+   One stylesheet, no framework. The terminal's own palette and a type system
+   borrowed from the same world, so the site and the product read as one thing.
+
+   Archivo for headlines: an industrial grotesque with enough width and weight
+   to carry a price. IBM Plex Sans for reading, IBM Plex Mono for anything that
+   is data: eyebrows, prices, tickers, keys. The terminal itself sets its
+   numbers in a mono face, and the site does the same, so a screenshot sits
+   inside the page rather than on top of it.
+
+   Deliberately single theme. It is a dark terminal; a light version of this
+   page would be a different product. Every colour is painted explicitly so the
+   page holds on any host background. */
 
 :root {
   --ground: #0d1117;
@@ -16,6 +26,11 @@
   --live: #d64550;
   --demo: #2f81f7;
   --max: 1120px;
+
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -26,9 +41,9 @@ body {
   margin: 0;
   background: var(--ground);
   color: var(--text);
-  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        Helvetica, Arial, sans-serif;
+  font: 400 16.5px/1.65 var(--body);
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -45,7 +60,8 @@ header {
 }
 .bar { display: flex; align-items: center; gap: 28px; height: 62px; }
 .logo {
-  font-weight: 800; font-size: 22px; letter-spacing: 0.06em;
+  font-family: var(--display);
+  font-weight: 800; font-size: 23px; letter-spacing: 0.08em;
   color: var(--text);
 }
 .logo span { color: var(--accent); }
@@ -55,9 +71,11 @@ nav a:hover { color: var(--text); text-decoration: none; }
 
 .btn {
   display: inline-block; border-radius: 6px; font-weight: 600;
-  padding: 11px 20px; font-size: 15px; border: 1px solid transparent;
-  cursor: pointer; text-align: center;
+  padding: 12px 22px; font-size: 15px; border: 1px solid transparent;
+  cursor: pointer; text-align: center; font-family: var(--body);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .btn-primary { background: var(--accent); color: #12171e; }
 .btn-primary:hover { background: #ff9a52; text-decoration: none; }
 .btn-ghost { border-color: var(--rule); color: var(--text-dim); background: transparent; }
@@ -67,13 +85,25 @@ nav a:hover { color: var(--text); text-decoration: none; }
 /* -- sections ----------------------------------------------------------- */
 section { padding: 84px 0; border-bottom: 1px solid var(--rule); }
 section:last-of-type { border-bottom: 0; }
-h1 { font-size: 52px; line-height: 1.1; margin: 0 0 20px; letter-spacing: -0.02em; }
-h2 { font-size: 30px; margin: 0 0 12px; letter-spacing: -0.01em; }
-h3 { font-size: 18px; margin: 0 0 8px; }
-.lede { font-size: 19px; color: var(--text-dim); max-width: 62ch; }
+h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(38px, 5.4vw, 58px); line-height: 1.04;
+  margin: 0 0 22px; letter-spacing: -0.025em; text-wrap: balance;
+}
+h2 {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(26px, 3vw, 33px); margin: 0 0 14px;
+  letter-spacing: -0.015em; text-wrap: balance;
+}
+h3 { font-family: var(--display); font-weight: 700; font-size: 18px;
+     margin: 0 0 8px; letter-spacing: -0.005em; }
+.lede { font-size: 19px; color: var(--text-dim); max-width: 62ch; line-height: 1.62; }
+/* Eyebrows are set in the data face on purpose: they are labels on an
+   instrument, not headings in an essay. */
 .eyebrow {
-  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--text-faint); margin-bottom: 14px; font-weight: 700;
+  font-family: var(--mono);
+  font-size: 11.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 16px; font-weight: 500;
 }
 
 .hero { padding-top: 76px; padding-bottom: 56px; }
@@ -110,8 +140,9 @@ figcaption {
 .does li, .doesnt li { margin-bottom: 9px; }
 
 .tag {
-  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
-  padding: 3px 8px; border-radius: 4px; text-transform: uppercase;
+  display: inline-block; font-family: var(--mono); font-size: 11px;
+  font-weight: 600; letter-spacing: 0.12em;
+  padding: 4px 9px; border-radius: 4px; text-transform: uppercase;
 }
 .tag-demo { background: var(--demo); color: #fff; }
 .tag-live { background: var(--live); color: #fff; }
@@ -125,11 +156,16 @@ figcaption {
 .price.featured { border-color: var(--accent); }
 .price .flag {
   position: absolute; top: -11px; left: 30px; background: var(--accent);
-  color: #12171e; font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
-  padding: 3px 10px; border-radius: 4px; text-transform: uppercase;
+  color: #12171e; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.12em; padding: 4px 11px; border-radius: 4px;
+  text-transform: uppercase;
 }
-.amount { font-size: 46px; font-weight: 800; letter-spacing: -0.03em; }
-.per { color: var(--text-faint); font-size: 15px; font-weight: 500; }
+.amount {
+  font-family: var(--mono); font-size: 46px; font-weight: 600;
+  letter-spacing: -0.03em; color: var(--text);
+}
+.per { color: var(--text-faint); font-size: 15px; font-weight: 400;
+       font-family: var(--body); }
 .price ul { list-style: none; padding: 0; margin: 22px 0; color: var(--text-dim); font-size: 15px; }
 .price li { padding: 7px 0 7px 26px; position: relative; }
 .price li::before {
@@ -149,6 +185,7 @@ details {
 }
 details summary {
   cursor: pointer; font-weight: 600; font-size: 17px; list-style: none;
+  font-family: var(--display);
   display: flex; justify-content: space-between; align-items: center;
 }
 details summary::-webkit-details-marker { display: none; }
@@ -159,8 +196,9 @@ details p { color: var(--text-dim); margin: 12px 0 0; max-width: 76ch; }
 /* -- footer ------------------------------------------------------------- */
 footer { padding: 46px 0 64px; color: var(--text-faint); font-size: 14px; }
 .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
-footer h4 { color: var(--text-dim); font-size: 13px; letter-spacing: 0.08em;
-            text-transform: uppercase; margin: 0 0 12px; }
+footer h4 { color: var(--text-dim); font-family: var(--mono); font-size: 11.5px;
+            letter-spacing: 0.16em; text-transform: uppercase; margin: 0 0 14px;
+            font-weight: 500; }
 footer ul { list-style: none; padding: 0; margin: 0; }
 footer li { margin-bottom: 8px; }
 footer a { color: var(--text-faint); }
@@ -182,7 +220,7 @@ footer a { color: var(--text-faint); }
 }
 
 code, .mono {
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-family: var(--mono);
   background: var(--panel-hi); padding: 2px 6px; border-radius: 4px;
   font-size: 0.92em; color: var(--text);
 }
@@ -192,4 +230,9 @@ code, .mono {
   .g2, .g3, .prices, .foot-grid { grid-template-columns: 1fr; }
   nav a:not(.btn) { display: none; }
   section { padding: 60px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
 }

@@ -10,7 +10,7 @@ window.FIRE_CONFIG = {
   // Leave as "" when the service is serving this site itself, which is the
   // default arrangement: same origin, no CORS, one thing to deploy. Set it to
   // a full URL only if the site is hosted somewhere separate.
-  api: "",
+  api: "",          // same origin: the service serves this site
 
   // Flip to true only when payments are live AND the exchange has authorised
   // distribution in writing. While it is false the page shows prices and a
@@ -19,7 +19,7 @@ window.FIRE_CONFIG = {
   selling: false,
 
   // Where a customer reaches a human.
-  supportEmail: "",
+  supportEmail: "nj2121@gmail.com",
 
   // Direct download for the current release. Left empty until the first
   // installer is published, which hides the download buttons rather than

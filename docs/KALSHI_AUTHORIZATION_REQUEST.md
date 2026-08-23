@@ -93,6 +93,51 @@ Thank you for your time.
 
 ---
 
+## Technical annex: hold this back until they ask
+
+Do not send this with the first message. It makes a short, answerable request
+look like a submission, and the first message needs to be read by a person and
+routed. Send it when they come back with questions, which they will.
+
+**Architecture.** A single Windows desktop application. No server of ours sits
+between the customer and Kalshi. The only service we operate is a licence
+endpoint that answers whether a subscription is paid; it never sees a Kalshi
+key, an order, a position or a balance, and it does not proxy any Kalshi
+traffic.
+
+**Credential handling.** The customer creates their own API key in their own
+Kalshi account and pastes the key ID and private key into the application once.
+It is encrypted immediately with the Windows DPAPI store, tied to that Windows
+sign in, and only the encrypted form is written to disk. The key is decrypted in
+memory for the duration of a request signature and never written to a log, a
+crash report or a support bundle. Support bundles are redacted at the point of
+writing, and any bundle that cannot be verified clean is discarded rather than
+saved. We have no mechanism by which a key could reach us.
+
+**Order handling.** Every order originates in a human click. Orders are
+immediate or cancel limit orders priced from the visible book, so nothing rests.
+There is no scheduling, no automation, no strategy and no queue. The application
+also enforces a customer set maximum loss per order before anything is sent.
+
+**Market data.** Displayed on screen for the customer whose key fetched it.
+Nothing is aggregated, stored on our side, resold, republished or shared between
+customers. Any local caching is transient and on the customer's own machine, for
+that customer's own trading.
+
+**Rate limiting.** A client side token bucket paces requests, with exponential
+backoff and jitter on 429 and 5xx responses and a bounded retry count. We will
+design to whatever ceiling you specify, per key or per application.
+
+**Release control.** Builds are gated automatically before release: the
+application is verified to contain no credentials, no key material and no
+server side components. We are happy to submit a build for review, to run in
+the demo environment first, or to accept written conditions on distribution.
+
+**Scale.** We expect tens of customers, not thousands. Each is an individual
+member trading their own account with their own key.
+
+---
+
 ## Expected outcomes
 
 | Answer | What we do |

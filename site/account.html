@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manage your FIRE subscription</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo">FI<span>RE</span></div>
+    <nav><a href="/">Home</a><a href="/#faq">FAQ</a></nav>
+  </div>
+</header>
+
+<section style="padding-top:64px">
+  <div class="wrap" style="max-width:680px">
+    <div class="eyebrow">Your subscription</div>
+    <h1 style="font-size:38px">Manage your subscription</h1>
+    <p class="lede">
+      Change your card, download invoices, or cancel. Enter the licence key you
+      use in FIRE and we will take you to the billing portal.
+    </p>
+
+    <div style="margin-top:34px">
+      <label for="key" style="display:block; font-size:12px; letter-spacing:0.14em;
+             text-transform:uppercase; color:var(--text-faint); margin-bottom:8px">
+        Licence key
+      </label>
+      <input id="key" placeholder="FIRE-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off"
+             style="width:100%; padding:14px 16px; border-radius:8px;
+                    background:var(--panel); border:1px solid var(--rule);
+                    color:var(--text); font-size:17px; letter-spacing:0.04em;
+                    font-family:ui-monospace,Consolas,monospace">
+      <p style="margin-top:16px">
+        <button class="btn btn-primary" id="go">Open billing portal</button>
+      </p>
+      <p id="msg" style="color:var(--text-faint); font-size:15px; min-height:24px"></p>
+    </div>
+
+    <div class="callout" style="margin-top:30px">
+      <strong>Cancelling does not close your positions.</strong> You keep access
+      until the end of the period you have paid for. After that FIRE stops
+      sending orders and tells you why. Anything you hold stays open at your
+      exchange, where you manage it as normal.
+    </div>
+
+    <p style="margin-top:30px; color:var(--text-faint); font-size:15px">
+      Lost your key? <a href="mailto:SUPPORT_EMAIL" data-show-address="1">Email us</a>
+      from the address you bought with and we will resend it. Never send a
+      licence key or an API key to anyone who asks for it.
+    </p>
+  </div>
+</section>
+
+<script src="config.js"></script>
+<script>
+document.getElementById('go').addEventListener('click', function () {
+  var key = document.getElementById('key').value.trim();
+  var msg = document.getElementById('msg');
+  if (!key) { msg.textContent = 'Enter the licence key you use in FIRE.'; return; }
+  msg.textContent = 'Looking that up...';
+  fetch(window.FIRE_API + '/portal?key=' + encodeURIComponent(key))
+    .then(function (r) {
+      if (r.status === 404) { throw new Error('unknown'); }
+      if (!r.ok) { throw new Error('unavailable'); }
+      return r.json();
+    })
+    .then(function (data) { window.location = data.url; })
+    .catch(function (err) {
+      msg.textContent = err.message === 'unknown'
+        ? 'We do not recognise that key. Check it against your receipt, or email support.'
+        : 'The billing portal is not reachable right now. Please try again shortly.';
+    });
+});
+</script>
+</body>
+</html>

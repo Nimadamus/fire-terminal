@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIRE — execution terminal for short duration event contracts</title>
+<meta name="description" content="FIRE is a Windows execution terminal for short duration event contracts. Every open market on one screen, one click to buy either side, and a loss ceiling checked before every order.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo">FI<span>RE</span></div>
+    <nav>
+      <a href="#what">What it is</a>
+      <a href="#features">Features</a>
+      <a href="#security">Security</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn-primary btn-sm" href="#pricing">Start free trial</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ==================================================================== -->
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Windows desktop terminal</div>
+    <h1>Every market on one screen.<br>One click to take a side.</h1>
+    <p class="lede">
+      FIRE is an execution terminal for short duration event contracts. It puts
+      the index price, the level you have to beat and both sides of the book in
+      front of you, and it sends the order the moment you decide. It does not
+      tell you what to trade.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#pricing">Start your free trial</a>
+      <a class="btn btn-ghost" href="#demo">Try demo mode first</a>
+    </div>
+    <p class="hero-note">
+      14 day trial. No card required to start. Demo mode is free forever and
+      needs no exchange account.
+    </p>
+
+    <figure>
+      <img src="img/terminal.png" alt="The FIRE terminal showing ten crypto markets with index price, strike, book prices and one click buy buttons">
+      <figcaption>FIRE in demo mode. Ten markets, live book, positions on the card.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="what">
+  <div class="wrap">
+    <div class="eyebrow">What FIRE is</div>
+    <h2>A fast hand on the trigger, not an opinion</h2>
+    <p class="lede">
+      Short duration contracts settle in minutes. By the time you have tabbed
+      between a chart, a book and an order form, the window you were looking at
+      has already moved. FIRE collapses that into one screen and one click.
+    </p>
+
+    <div class="grid g2" style="margin-top:36px">
+      <div class="does">
+        <h3>What FIRE does</h3>
+        <ul>
+          <li>Shows every open market at once, with the index price and the
+              level it has to finish past.</li>
+          <li>Reads the book and prices your order from what is actually there,
+              not from a guess.</li>
+          <li>Sends immediate or cancel orders, so nothing you click sits
+              resting on a book you have stopped watching.</li>
+          <li>Refuses any order whose worst case loss is bigger than the ceiling
+              you set.</li>
+          <li>Keeps your positions and fills in one place.</li>
+        </ul>
+      </div>
+      <div class="doesnt">
+        <h3>What FIRE does not do</h3>
+        <ul>
+          <li>It does not tell you what to buy. There are no signals, no
+              alerts, no scores and no recommendations.</li>
+          <li>It does not trade on your behalf. Nothing is sent that you did
+              not click.</li>
+          <li>It does not hold your money. Your account stays at your exchange
+              and we never touch it.</li>
+          <li>It does not promise you a profit. Nobody honest can.</li>
+          <li>It is not a broker, a dealer, or an adviser.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Who it is for.</strong> People already trading short duration
+      event contracts who are losing money to their own execution: the mistyped
+      size, the order that filled twenty cents worse than the screen said, the
+      window that closed while they were still clicking. If you are looking for
+      something to tell you what to trade, FIRE is the wrong product.
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow">Features</div>
+    <h2>Built for the ninety seconds that matter</h2>
+
+    <div class="grid g3">
+      <div class="card">
+        <h3>Index and target together</h3>
+        <p>Where the market is, and what it has to finish past, on the same
+        card with the gap between them worked out for you.</p>
+      </div>
+      <div class="card">
+        <h3>Priced off the real book</h3>
+        <p>Enter a dollar amount. FIRE walks the visible depth and sends a
+        count that cannot cost more than you typed.</p>
+      </div>
+      <div class="card">
+        <h3>A ceiling that actually holds</h3>
+        <p>Set a maximum loss as a share of your balance. Every order is checked
+        against it before it leaves your machine.</p>
+      </div>
+      <div class="card">
+        <h3>Immediate or cancel</h3>
+        <p>Orders fill against what is there now or they do not fill at all.
+        Nothing is left resting after you have moved on.</p>
+      </div>
+      <div class="card">
+        <h3>Positions and fills</h3>
+        <p>What you hold, what it cost and what it pays if it comes in, next to
+        each other, with the fill history underneath.</p>
+      </div>
+      <div class="card">
+        <h3>Honest status</h3>
+        <p>Connection, subscription and mode are on screen at all times. When
+        something is wrong FIRE says so in plain words.</p>
+      </div>
+    </div>
+
+    <figure>
+      <img src="img/activity.png" alt="The FIRE activity window listing open positions with cost and payout, and a list of recent fills">
+      <figcaption>Cost and payout side by side, because that is the whole shape
+      of a binary contract.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="demo">
+  <div class="wrap">
+    <div class="eyebrow">Demo and live</div>
+    <h2>Two modes that cannot be confused for each other</h2>
+    <p class="lede">
+      This is not a toggle around the same code. Demo and live are separate
+      implementations. The demo half of FIRE contains no networking code at
+      all, so a demo order has nowhere to go even if something goes wrong.
+    </p>
+
+    <div class="grid g2" style="margin-top:36px">
+      <div class="card">
+        <h3><span class="tag tag-demo">Demo</span></h3>
+        <p style="margin-top:14px">
+          Simulated markets, a simulated balance and simulated fills. No
+          exchange account, no API key, no money. Free forever, and a blue
+          banner across the top says <span class="mono">PAPER</span> the whole
+          time you are in it.
+        </p>
+      </div>
+      <div class="card">
+        <h3><span class="tag tag-live">Live</span></h3>
+        <p style="margin-top:14px">
+          Your own exchange account, your own API key, real orders. A red
+          banner says <span class="mono">LIVE</span> and FIRE asks you to
+          confirm before each order until you turn that off yourself.
+        </p>
+      </div>
+    </div>
+
+    <div class="callout">
+      FIRE never moves you from live to demo on its own. If your subscription
+      lapses it stops sending orders and tells you why. It does not quietly
+      swap your real balance for a simulated one while you have positions open.
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="security">
+  <div class="wrap">
+    <div class="eyebrow">Security</div>
+    <h2>Your key stays on your computer</h2>
+
+    <div class="grid g2" style="margin-top:36px">
+      <div class="card">
+        <h3>We never receive your API key</h3>
+        <p>It is encrypted with your operating system's own secret store, which
+        ties it to your Windows sign in. Orders are signed on your machine. We
+        do not have your key and cannot recover it for you.</p>
+      </div>
+      <div class="card">
+        <h3>Nothing ships with credentials</h3>
+        <p>The download contains no keys, no tokens and no accounts. It connects
+        to nothing until you supply your own key, and the build is checked
+        automatically before every release.</p>
+      </div>
+      <div class="card">
+        <h3>Support files are scrubbed</h3>
+        <p>Diagnostics writes a support bundle with key material removed before
+        anything reaches the disk. If FIRE cannot verify a bundle is clean it
+        throws it away rather than saving it.</p>
+      </div>
+      <div class="card">
+        <h3>You can revoke us in one click</h3>
+        <p>Remove the saved key from Preferences at any time, and revoke it at
+        your exchange. FIRE ships with written instructions for rotating a key
+        and for what to do if your laptop is lost.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      We will never ask you for your private key. Not by email, not in a support
+      ticket, not on a screen share. Nobody needs it to help you.
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="eyebrow">Pricing</div>
+    <h2>One product, one price</h2>
+    <p class="lede">
+      No tiers, no feature gates, no per order fees. Everything FIRE does is in
+      every subscription.
+    </p>
+
+    <div class="prices">
+      <div class="price">
+        <div class="amount">$59<span class="per"> / month</span></div>
+        <ul>
+          <li>Every feature, no limits</li>
+          <li>Up to 3 computers</li>
+          <li>Free updates while subscribed</li>
+          <li>Cancel any time, in one click</li>
+        </ul>
+        <a class="btn btn-ghost" href="#" data-plan="monthly">Start free trial</a>
+      </div>
+
+      <div class="price featured">
+        <div class="flag">2 months free</div>
+        <div class="amount">$590<span class="per"> / year</span></div>
+        <ul>
+          <li>Everything in monthly</li>
+          <li>Works out at $49 a month</li>
+          <li>Free updates while subscribed</li>
+          <li>Cancel any time, in one click</li>
+        </ul>
+        <a class="btn btn-primary" href="#" data-plan="annual">Start free trial</a>
+      </div>
+    </div>
+
+    <div class="founding">
+      <strong>Founding members.</strong> The first 50 subscribers pay $39 a
+      month, or $390 a year, and keep that price for as long as the subscription
+      stays active. In exchange we would like to hear from you when something is
+      wrong.
+    </div>
+
+    <p style="margin-top:26px; color:var(--text-faint); font-size:14px">
+      Trials run for 14 days with full access and no card. You will need your
+      own account at the exchange and your own API key to trade live. Demo mode
+      never requires a subscription.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="faq">
+  <div class="wrap">
+    <div class="eyebrow">Questions</div>
+    <h2>Before you buy</h2>
+
+    <div style="margin-top:26px">
+      <details>
+        <summary>Does FIRE tell me what to trade?</summary>
+        <p>No, and it never will. FIRE has no signals, no scores, no alerts and
+        no recommendations. It shows you the market and sends the order you
+        click. Every trading decision is yours.</p>
+      </details>
+      <details>
+        <summary>Will FIRE make me money?</summary>
+        <p>We have no idea, and anyone who tells you otherwise about any trading
+        product is selling you something. FIRE is a tool for placing orders
+        faster and more precisely than a browser lets you. What you do with it
+        is up to you, and you can lose the entire amount you risk on any
+        contract.</p>
+      </details>
+      <details>
+        <summary>Do you see my trades or my account?</summary>
+        <p>No. FIRE runs on your computer and talks to your exchange directly
+        using your key. We do not receive your orders, your positions, your
+        balance or your key. The only thing our servers know about you is
+        whether your subscription is paid.</p>
+      </details>
+      <details>
+        <summary>What do I need to run it?</summary>
+        <p>Windows 10 or 11 and an account at a supported exchange with an API
+        key you create yourself. There is nothing to install beyond the
+        installer: no Python, no command line, no configuration files.</p>
+      </details>
+      <details>
+        <summary>What happens if I cancel?</summary>
+        <p>You keep access until the end of the period you have paid for, then
+        FIRE stops sending orders and tells you why. Nothing is closed and
+        nothing is sold. Positions you hold stay open at your exchange, where
+        you manage them as normal. Demo mode keeps working.</p>
+      </details>
+      <details>
+        <summary>What happens if your servers go down?</summary>
+        <p>FIRE keeps working. Your subscription is confirmed with a signed
+        token that stays valid for several days without a check, precisely so
+        an outage on our side cannot lock you out of a position on yours.</p>
+      </details>
+      <details>
+        <summary>Can I use it on more than one computer?</summary>
+        <p>Yes, up to three. If you need to move to a new machine beyond that,
+        write to us and we will free one up.</p>
+      </details>
+      <details>
+        <summary>Why does Windows warn me about the installer?</summary>
+        <p>Windows shows that warning for any installer it has not seen many
+        times before. Choose More info, then Run anyway. We are working on a
+        signing certificate, which is what removes it.</p>
+      </details>
+      <details>
+        <summary>Is there a refund?</summary>
+        <p>The trial exists so you can find out before paying. If something is
+        genuinely wrong in your first week of a paid subscription, write to us
+        and we will refund it.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="support">
+  <div class="wrap">
+    <div class="eyebrow">Support</div>
+    <h2>A person, within one business day</h2>
+    <p class="lede">
+      Support is by email. FIRE can write a support bundle for you from its
+      Diagnostics window, with your credentials removed before it is saved, so
+      one message usually settles it.
+    </p>
+    <p style="margin-top:22px">
+      <a class="btn btn-ghost" href="mailto:SUPPORT_EMAIL">Email support</a>
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="logo" style="font-size:19px">FI<span>RE</span></div>
+        <p style="margin-top:10px; max-width:44ch">
+          An execution terminal for short duration event contracts. Windows
+          desktop. Your key, your account, your decisions.
+        </p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="/account">Manage subscription</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/legal/risk">Risk disclosure</a></li>
+          <li><a href="/legal/terms">Terms of service</a></li>
+          <li><a href="/legal/licence">Licence agreement</a></li>
+          <li><a href="/legal/privacy">Privacy policy</a></li>
+          <li><a href="/legal/refunds">Refunds and cancellation</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <p><strong>Risk warning.</strong> Event contracts can settle at nothing.
+      You can lose the entire amount you pay for any contract, and no setting in
+      FIRE can prevent that once an order has filled. Only risk money you can
+      afford to lose entirely.</p>
+      <p><strong>We are not an adviser.</strong> FIRE is order entry software.
+      It provides no investment advice, no recommendations and no trading
+      signals, and it does not manage money or trade on anyone's behalf. We are
+      not a broker, a dealer, a futures commission merchant or a registered
+      investment adviser, and we are not affiliated with or endorsed by any
+      exchange.</p>
+      <p><strong>Your account is yours.</strong> FIRE connects to an exchange
+      account you open yourself, using an API key you create yourself. You
+      remain responsible for that account, for complying with your exchange's
+      own terms, and for every order placed from it.</p>
+      <p style="margin-top:18px">© FIRE. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+// Checkout is started by the licence service, which creates the Stripe session.
+// The site never holds a Stripe key and never sees a card.
+document.querySelectorAll('[data-plan]').forEach(function (el) {
+  el.addEventListener('click', function (event) {
+    event.preventDefault();
+    var plan = el.getAttribute('data-plan');
+    var original = el.textContent;
+    el.textContent = 'Opening checkout...';
+    fetch(window.FIRE_API + '/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: plan })
+    }).then(function (r) {
+      if (!r.ok) { throw new Error('checkout unavailable'); }
+      return r.json();
+    }).then(function (data) {
+      if (data.url) { window.location = data.url; }
+      else { throw new Error('no url'); }
+    }).catch(function () {
+      el.textContent = original;
+      alert('Checkout is not available at the moment. Please try again in a '
+          + 'minute, or email support and we will sort it out.');
+    });
+  });
+});
+</script>
+</body>
+</html>

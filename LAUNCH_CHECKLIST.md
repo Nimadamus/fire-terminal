@@ -79,7 +79,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 | F2 | No discretion over any customer account, no custody of funds | REQUIRED | **Done** by architecture |
 | F3 | No advice tailored to any customer's account or circumstances | REQUIRED | **Done** by architecture |
 | F4 | No performance claims in any marketing, ever | REQUIRED | Standing rule |
-| F5 | Confirm CFTC Rule 4.14(a)(9) posture with counsel before launch | **OPEN** | Not started |
+| F5 | Confirm CFTC Rule 4.14(a)(9) posture with counsel before launch | **OPEN** | Not started. Same attorney conversation as F1 and E4. |
 
 **F4 is absolute.** The trading record must never appear in any marketing
 material. It converts a software sale into a performance claim and invites
@@ -94,7 +94,7 @@ scrutiny of the automated system, which is not what is being sold.
 | G3 | Privacy policy covering what FIRE stores and where | REQUIRED | **Drafted**, needs legal review |
 | G4 | Refund and cancellation terms | REQUIRED | **Drafted** (14 day full refund), needs legal review |
 | G5 | Support channel and response expectation | REQUIRED | **Policy written**, `docs/SUPPORT.md`, and the app tells the customer where to send a bundle from one constant. **The address itself is your decision**; the release gate blocks a beta or stable build while it is empty. |
-| G6 | Business entity in place before taking payment | REQUIRED | Not started |
+| G6 | Business entity in place before taking payment | REQUIRED | **Yours.** Stripe can onboard an individual, so this is not strictly blocking, but the licence agreement's governing law clause stays incomplete without it. |
 
 ## H. Product readiness
 
@@ -105,7 +105,7 @@ scrutiny of the automated system, which is not what is being sold.
 | H3 | Support bundle redacts secrets, verified | REQUIRED | **Done**, enforced by test |
 | H4 | No stack traces reach the customer | REQUIRED | **Done** |
 | H5 | Signed installer, code signing certificate | REQUIRED | **Installer done**: `FIRE-<version>-setup.exe`, 11.7 MB, per user, no admin prompt, silent install and uninstall verified. **Certificate still needed** and is on you: unsigned means a SmartScreen warning on every first run. |
-| H6 | Update feed and version check | REQUIRED | **Client done** (`updates.py`, non blocking, sends nothing about the customer). Feed hosting still needed. |
+| H6 | Update feed and version check | REQUIRED | **Done end to end**: the client checks, the terminal shows one quiet line with a download button, and `packaging/make_feed.py` generates the feed with a checksum. Only the hosting URL is outstanding. |
 | H7 | Crash reporting, sanitized | REQUIRED | **Done**, no locals rendered, credential frames withheld, discarded if not verifiably clean |
 
 ---

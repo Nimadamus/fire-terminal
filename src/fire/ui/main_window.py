@@ -277,6 +277,12 @@ class MainWindow(tk.Tk):
                                 font=Font.small, cursor="hand2")
         self.ent_lbl.pack(side="right", padx=(Space.md, 0))
         self.ent_lbl.bind("<Button-1>", lambda _e: self._open_account())
+        # Activation lives behind this. A customer with a licence key in their
+        # hand should not have to work out that the small grey status text is
+        # clickable.
+        FlatButton(right, "Account", self._open_account, p,
+                   bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
+                   font=Font.small, pady=5).pack(side="right", padx=4)
         FlatButton(right, "Activity", self._open_activity, p,
                    bg=p.panel_hi, fg=p.text_dim, hover=p.rule,
                    font=Font.small, pady=5).pack(side="right", padx=4)

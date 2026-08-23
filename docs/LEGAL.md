@@ -6,6 +6,9 @@ review is cheap, not so we can skip the review.
 
 Covers launch checklist G1 to G4 and E3.
 
+Six documents: risk disclosure, licence agreement, privacy policy, refunds
+and cancellation, terms of service, and the independence statement.
+
 ---
 
 ## 1. Risk disclosure (shown during setup, before live trading is enabled)
@@ -136,7 +139,56 @@ see or store your card details.
 
 ---
 
-## 5. Independence statement (checklist E3)
+## 5. Terms of service (the website and the subscription)
+
+**1. What these cover.** These terms govern the FIRE website and the
+subscription service that issues and checks licences. Use of the FIRE
+application itself is governed by the licence agreement above. Where the two
+overlap, the licence agreement governs the software.
+
+**2. Eligibility.** You must be old enough to enter a contract where you live,
+and you must not be located anywhere our exchange or our payment processor
+prohibits. You are responsible for knowing whether trading event contracts is
+lawful where you are.
+
+**3. Your licence key.** A subscription grants one licence key, usable on up to
+three computers. The key is yours to keep private. Sharing it, publishing it or
+reselling access is a breach of these terms and we may revoke it.
+
+**4. Billing.** Subscriptions renew automatically at the interval you chose
+until cancelled. Prices are shown before you pay and we will give notice inside
+the application before any price change takes effect for you. Payment is
+handled by Stripe; we never receive or store your card details.
+
+**5. Trials.** A trial gives full access for a limited period. One trial per
+person. We may end a trial early if it is being abused.
+
+**6. Cancellation and refunds.** See the refunds and cancellation terms below.
+You can cancel yourself at any time through the billing portal.
+
+**7. Suspension.** We may suspend or revoke access for non payment, for
+breaching these terms, or where continuing would put us in breach of a law, a
+payment processor rule or an exchange agreement. Where we can, we will tell you
+why first.
+
+**8. Availability.** We aim to keep the licence service up but we do not
+guarantee it. FIRE is built so that a service outage does not stop a paying
+customer trading, and no uptime figure is promised.
+
+**9. Support.** Support is by email, and we aim to reply within one business
+day. We answer questions about FIRE. We do not answer questions about what to
+trade, and we cannot help with your exchange account.
+
+**10. Changes.** We may update these terms. Material changes will be shown in
+the application before they take effect, and continuing to use FIRE after that
+means you accept them.
+
+**11. Governing law.** [To be completed once the business entity exists,
+checklist item G6. Must match the entity's jurisdiction.]
+
+---
+
+## 6. Independence statement (checklist E3)
 
 > FIRE is an independent product. It is not affiliated with, endorsed by,
 > sponsored by, or approved by any exchange. All trademarks belong to their
@@ -152,7 +204,7 @@ comes back in writing, no exchange is named in any customer facing material.
 
 | Item | Blocker |
 |---|---|
-| Legal review of all four documents | Not started |
+| Legal review of all six documents | Not started |
 | Governing law clause | Needs the business entity (G6) |
 | Naming any exchange in customer material | Needs written authorization |
 | Consumer law check for the customer's jurisdiction | Refund and liability terms differ by country |

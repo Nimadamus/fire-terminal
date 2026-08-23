@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome to FIRE</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="style.css">
+<style>
+  .steps { counter-reset: step; margin-top: 40px; }
+  .step {
+    display: grid; grid-template-columns: 44px 1fr; gap: 20px;
+    padding: 26px 0; border-bottom: 1px solid var(--rule);
+  }
+  .step:last-child { border-bottom: 0; }
+  .step .n {
+    counter-increment: step; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--panel-hi); border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--accent);
+  }
+  .step .n::before { content: counter(step); }
+  .step p { color: var(--text-dim); margin: 6px 0 0; }
+  .keybox {
+    background: var(--panel); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 26px; margin-top: 30px; text-align: center;
+  }
+  .keyval {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 26px; letter-spacing: 0.06em; color: var(--text);
+    margin: 14px 0; word-break: break-all;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo">FI<span>RE</span></div>
+    <nav><a href="/">Home</a></nav>
+  </div>
+</header>
+
+<section style="padding-top:64px">
+  <div class="wrap" style="max-width:820px">
+    <div class="eyebrow">You are in</div>
+    <h1 style="font-size:40px">Welcome to FIRE</h1>
+    <p class="lede">
+      Four steps and you are trading. Nothing here needs a command line and
+      nothing needs to be configured by hand.
+    </p>
+
+    <!-- The key appears here as soon as the payment is confirmed. It is shown
+         on screen rather than only emailed, so nobody is stuck waiting on an
+         inbox. -->
+    <div class="keybox" id="keybox">
+      <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-faint)">
+        Your licence key
+      </div>
+      <div class="keyval" id="key">Confirming your payment...</div>
+      <div id="keynote" style="color:var(--text-faint); font-size:14px">
+        This takes a few seconds.
+      </div>
+      <p style="margin-top:18px">
+        <button class="btn btn-ghost btn-sm" id="copy" hidden>Copy key</button>
+      </p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n"></div>
+        <div>
+          <h3>Download and install</h3>
+          <p>
+            Run the installer and click through it. It does not need
+            administrator rights. Windows may warn you about an unknown
+            publisher: choose <strong>More info</strong>, then
+            <strong>Run anyway</strong>.
+          </p>
+          <p style="margin-top:14px">
+            <a class="btn btn-primary btn-sm" data-download href="#">Download FIRE for Windows</a>
+            <span data-version style="color:var(--text-faint); font-size:13px; margin-left:10px"></span>
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="n"></div>
+        <div>
+          <h3>Enter your licence key</h3>
+          <p>
+            Open FIRE, click <strong>Account</strong> at the top right, paste the
+            key above and choose <strong>Apply licence</strong>. That is the
+            whole of activation. There is no account to create and no password
+            to remember.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="n"></div>
+        <div>
+          <h3>Look around in demo mode first</h3>
+          <p>
+            FIRE opens in demo with a simulated balance. Place a few orders and
+            watch a window settle. Nothing here touches an exchange and no money
+            is involved, so it is a free place to get the feel of it.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="n"></div>
+        <div>
+          <h3>Connect your exchange account</h3>
+          <p>
+            Create an API key in your exchange account, then paste the key ID
+            and the private key file into FIRE's setup screen. FIRE encrypts it
+            with Windows' own secret store and it never leaves your computer.
+          </p>
+          <p style="margin-top:10px">
+            Use a key created specifically for FIRE rather than one you already
+            use elsewhere. If you ever need to revoke it you then cut off one
+            thing rather than everything at once.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:36px">
+      <strong>Before your first live order.</strong> Check the banner across the
+      top of the window. Blue and <span class="mono">PAPER</span> means
+      simulated. Red and <span class="mono">LIVE</span> means real money and
+      orders that are final. Set your maximum loss per order in Preferences
+      before you switch.
+    </div>
+
+    <p style="margin-top:36px; color:var(--text-faint); font-size:15px">
+      Stuck on any of this? <a href="mailto:SUPPORT_EMAIL" data-show-address="1">Email us</a>
+      and we will get you running.
+    </p>
+  </div>
+</section>
+
+<script src="config.js"></script>
+<script>
+// Poll the licence service until the Stripe webhook has landed. The redirect
+// from Stripe can beat the webhook by a second or two, so 202 means "keep
+// asking" rather than "something is wrong".
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+  var keyEl = document.getElementById('key');
+  var noteEl = document.getElementById('keynote');
+  var copyEl = document.getElementById('copy');
+
+  if (!sessionId) {
+    keyEl.textContent = 'No purchase to show';
+    noteEl.textContent = 'Open this page from the link you were sent after paying, '
+      + 'or email support and we will send your key.';
+    return;
+  }
+
+  var attempts = 0;
+  function poll() {
+    attempts += 1;
+    fetch(window.FIRE_API + '/licence?session_id=' + encodeURIComponent(sessionId))
+      .then(function (r) {
+        if (r.status === 200) { return r.json(); }
+        if (attempts < 20) { setTimeout(poll, 1500); return null; }
+        throw new Error('timeout');
+      })
+      .then(function (data) {
+        if (!data) { return; }
+        keyEl.textContent = data.key;
+        noteEl.textContent = 'Save this somewhere safe. If you lose it, email '
+          + 'support from ' + (data.email || 'the address you bought with')
+          + ' and we will resend it.';
+        copyEl.hidden = false;
+        copyEl.onclick = function () {
+          navigator.clipboard.writeText(data.key);
+          copyEl.textContent = 'Copied';
+        };
+      })
+      .catch(function () {
+        keyEl.textContent = 'Taking longer than usual';
+        noteEl.textContent = 'Your payment went through. Email support and we '
+          + 'will send your key straight away.';
+      });
+  }
+  poll();
+})();
+</script>
+</body>
+</html>

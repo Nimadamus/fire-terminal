@@ -311,3 +311,19 @@ def test_offer_update_touches_no_widget_so_a_thread_can_call_it(app):
     assert app.update_bar.winfo_manager() == "pack"
     app._dismiss_update()
     app.update()
+
+
+def test_activation_is_reachable_without_knowing_a_label_is_clickable(app):
+    """A customer holding a licence key must find Account, not guess."""
+    labels = []
+    def walk(widget):
+        for child in widget.winfo_children():
+            try:
+                text = child.cget("text")
+                if isinstance(text, str) and text:
+                    labels.append(text)
+            except Exception:
+                pass
+            walk(child)
+    walk(app)
+    assert "Account" in labels

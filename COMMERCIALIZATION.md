@@ -125,6 +125,9 @@ and roughly 24 GB of research. None of it exists in this repository.
 | D6 | Redaction runs at the log write boundary, not at bundle time | A secret that reaches a log file has already leaked. |
 | D7 | Live trading is gated on entitlement, demo never is | A customer who cannot evaluate the product will not buy it. |
 | D8 | Architectural rules are tests, not documentation | The separation is the thing being sold. It has to fail the build when broken. |
+| D9 | Exchange authorization is a launch gate, not an engineering blocker | Nima's call. Everything that can be built safely gets built; nothing ships or is advertised until permission is in writing. The endpoint profile is the single seam that stays empty until then. |
+| D10 | Tkinter for v1, revisit after launch | Nima's call. Priority is a stable sellable v1, not a framework migration. |
+| D11 | The release gate judges `.pem` files by content, not extension | A CA trust bundle is a `.pem` full of certificates and ships legitimately with any HTTPS client. Blocking the extension produced a false positive on `certifi` and would have trained us to ignore the gate. It now looks for private key markers, and is tested against a planted key. |
 
 ## 5. Bugs found and fixed during the build
 
@@ -138,10 +141,10 @@ and roughly 24 GB of research. None of it exists in this repository.
 
 | Blocker | Owner | Status |
 |---|---|---|
-| Written distribution permission from the exchange | Nima | **unsent.** Draft ready. Nothing ships until this resolves. |
-| UI toolkit: stay on tkinter or move to PySide6 | Nima | asked, recommendation is stay for v1 |
-| Live adapter not implemented | Claude | next work item, safe to build |
-| Packaging, code signing and update feed | Claude | scheduled |
+| Written distribution permission from the exchange | Nima | **unsent.** Message drafted at `docs/KALSHI_AUTHORIZATION_REQUEST.md`. Treated as a launch gate, not an engineering blocker, per decision D9. |
+| UI toolkit | Nima | **decided: tkinter for v1** (D10) |
+| Code signing certificate | Nima | needed before any public release |
+| Update feed hosting | Nima | needed before update checks do anything |
 | Billing backend | later | interface exists, no implementation |
 
 ## 7. Progress log
@@ -159,13 +162,41 @@ and roughly 24 GB of research. None of it exists in this repository.
   apply live; theme and layout ask for a restart rather than pretending to
   hot swap.
 
+**Build 3.** Live adapter, packaging, shared planner.
+
+* **Shared order planner** (`core/planning.py`). The budget guarantee is now
+  written once and used by both venues. The audit showed exactly what happens
+  when execution mechanics are copied per venue: they drift silently, because
+  each copy looks locally correct. Demo was refactored onto it.
+* **Live adapter complete but unwired.** `endpoints.ACTIVE` is
+  `UNCONFIGURED`, so every live construction raises `ExchangeNotConfigured`
+  and the app falls back to demo with a clear message. Wiring it is filling
+  in one `EndpointProfile` object; a test proves URL and signature path
+  construction works against a configured profile, so the wiring step is
+  mechanical rather than a restructure.
+* **Credential injection by construction.** `RequestSigner` takes a
+  `Credentials` argument. Nothing in the venue package reads a file path, an
+  environment variable or a bundled key. The signer parses the key once and
+  keeps no reference to the PEM text, so a traceback cannot reach it. A test
+  asserts that.
+* **Conduct controls** in `transport.py`: client side rate ceiling, bounded
+  retries, exponential backoff with jitter, degrade rather than fail. Written
+  to satisfy checklist section D before it is ever needed.
+* **Packaging built and verified.** PyInstaller bundle produced at 31.8 MB
+  across 963 files, and the packaged exe launches. `packaging/verify_bundle.py`
+  is a release gate that inspects the built bundle for private keys, private
+  modules, internal vocabulary and size.
+
 ## 8. Verified state
 
 ```
-125 tests passing
+162 tests passing
+Packaged FIRE.exe builds and launches (31.8 MB)
+Release gate passes a clean bundle and blocks a planted private key
 First run onboarding renders and gates the terminal
 Demo mode runs, 12 simulated markets, order entry works end to end
-Preferences persists and applies risk changes without a restart
+Live adapter fully covered by tests with no network access
+Live endpoint ships UNCONFIGURED, asserted by test
 No network imports anywhere in the demo package
 No private module imports anywhere in src/fire
 No PEM blocks or key shaped identifiers anywhere in src/fire

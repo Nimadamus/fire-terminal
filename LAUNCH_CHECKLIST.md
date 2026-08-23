@@ -14,7 +14,7 @@ launch but is within our control. **OPEN** needs an answer we do not have.
 
 | # | Item | Type | State |
 |---|---|---|---|
-| A1 | Written authorization to distribute software other members use for their own trading | **BLOCKING** | Draft written, **not sent** |
+| A1 | Written authorization to distribute software other members use for their own trading | **BLOCKING** | Message drafted at `docs/KALSHI_AUTHORIZATION_REQUEST.md`, **not sent** |
 | A2 | Confirmation that supplying software to members who each hold their own API key and their own developer agreement is not sublicensing | **BLOCKING** | Open |
 | A3 | Confirmation that local caching of market data on the end user's own machine, for that user's own trading, is in scope | **BLOCKING** | Open |
 | A4 | Prior written approval for any marketing that references the exchange | **BLOCKING** | Open |
@@ -41,7 +41,7 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 | B2 | Credentials stored via OS secret store, never plaintext | REQUIRED | **Done** (DPAPI) |
 | B3 | Each customer accepts the exchange developer agreement themselves | REQUIRED | Needs onboarding step |
 | B4 | Confirm whether the exchange requires per-application registration | **OPEN** | Ask in A1 |
-| B5 | Credential revocation and rotation path documented for customers | REQUIRED | Not started |
+| B5 | Credential revocation and rotation path documented for customers | REQUIRED | Partly done: Preferences can remove saved credentials; customer facing doc still needed |
 
 ## C. Data rights
 
@@ -56,11 +56,11 @@ the thing at risk, which is why A1 to A4 are blocking rather than advisory.
 
 | # | Item | Type | State |
 |---|---|---|---|
-| D1 | Exponential backoff on all retries | REQUIRED | Pending live adapter |
-| D2 | Bounded retry counts | REQUIRED | Pending live adapter |
-| D3 | Per customer polling budget that will not trip limits at scale | REQUIRED | Pending live adapter |
+| D1 | Exponential backoff on all retries | REQUIRED | **Done** (`transport.py`, with jitter) |
+| D2 | Bounded retry counts | REQUIRED | **Done** (4 attempts, then a customer error) |
+| D3 | Per customer polling budget that will not trip limits at scale | REQUIRED | **Done** (client side rate gate on the endpoint profile) |
 | D4 | Confirm whether limits are per key or per application | **OPEN** | Ask in A1 |
-| D5 | Graceful degradation when limited, never a retry storm | REQUIRED | Error type exists |
+| D5 | Graceful degradation when limited, never a retry storm | REQUIRED | **Done** (poll interval triples while degraded) |
 
 ## E. Branding and trademark
 
@@ -104,11 +104,18 @@ scrutiny of the automated system, which is not what is being sold.
 | H2 | Demo mode usable without any account | REQUIRED | **Done** |
 | H3 | Support bundle redacts secrets, verified | REQUIRED | **Done**, enforced by test |
 | H4 | No stack traces reach the customer | REQUIRED | **Done** |
-| H5 | Signed installer, code signing certificate | REQUIRED | Not started |
-| H6 | Update feed and version check | REQUIRED | Interface exists, feed not built |
+| H5 | Signed installer, code signing certificate | REQUIRED | Installer **builds and launches** (31.8 MB). Certificate still needed. |
+| H6 | Update feed and version check | REQUIRED | **Client done** (`updates.py`, non blocking, sends nothing about the customer). Feed hosting still needed. |
 | H7 | Crash reporting, sanitized | REQUIRED | Not started |
 
 ---
+
+## Release gate
+
+`packaging/verify_bundle.py` runs against a built bundle and exits non zero
+if it finds private key material, a private module, internal vocabulary, or an
+oversized bundle. Verified working in both directions: it passes a clean build
+and blocks a deliberately planted private key.
 
 ## The one thing to do next
 

@@ -75,6 +75,12 @@ class EntitlementRequired(FireError):
     remedy = "Open Account to restore or renew your subscription. Demo mode stays available."
 
 
+class ExchangeNotConfigured(FireError):
+    """Raised while the approved API path has not been supplied to the build."""
+    title = "Live trading is not available in this build"
+    remedy = "Demo mode is fully available. Live trading unlocks in a future update."
+
+
 class DemoModeOnly(FireError):
     """Raised if anything ever tries to route a demo action to a live venue."""
     title = "Blocked: demo activity cannot reach a live account"

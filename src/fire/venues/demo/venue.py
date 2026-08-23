@@ -13,7 +13,8 @@ import threading
 import time
 from typing import Optional, Sequence
 
-from fire.core.errors import BookTooThin, MarketUnavailable
+from fire.core.errors import MarketUnavailable
+from fire.core.planning import plan_from_book
 from fire.core.models import (
     AccountSnapshot, Book, ConnectionState, Fill, IndexQuote, Instrument,
     OrderRequest, OrderResult, OrderState, Position, Side,
@@ -105,36 +106,7 @@ class DemoExecution(ExecutionVenue):
         book = self._data.book(ticker)
         if book is None:
             raise MarketUnavailable("That demo market is between windows.")
-        levels = book.yes if side is Side.YES else book.no
-        if not levels:
-            raise BookTooThin("No demo liquidity on that side right now.")
-
-        # Walk the visible ladder to find how deep we would have to reach.
-        spent, count, limit = 0.0, 0, levels[0].price
-        for lv in levels:
-            if spent + lv.price > budget_dollars:
-                break
-            take = min(lv.size, int((budget_dollars - spent) // lv.price))
-            if take <= 0:
-                break
-            count += take
-            spent += take * lv.price
-            limit = lv.price
-
-        # The guarantee the customer is owed: an immediate or cancel order can
-        # fill ANY of its contracts at the limit, so size against the limit and
-        # not against the cheaper ladder average. Without this clamp a deep
-        # walk quietly spends more than the amount that was typed.
-        affordable = int(budget_dollars // limit) if limit > 0 else 0
-        count = min(count, affordable)
-
-        if count <= 0:
-            raise BookTooThin(
-                f"${budget_dollars:,.2f} does not buy a single contract at "
-                f"{levels[0].price:.2f}."
-            )
-        return OrderRequest(ticker=ticker, side=side, limit_price=limit,
-                            count=count, budget_dollars=budget_dollars)
+        return plan_from_book(ticker, side, budget_dollars, book)
 
     def submit(self, request: OrderRequest) -> OrderResult:
         with self._s.lock:

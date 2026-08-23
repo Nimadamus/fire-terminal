@@ -11,6 +11,7 @@ import sys
 from fire.config import prefs as prefs_module
 from fire.config.credentials import CredentialStore
 from fire.config.paths import logs_dir
+from fire.core.errors import FireError
 from fire.core.session import Session
 from fire.diagnostics.redact import redact_text
 from fire.entitlement.local import LocalEntitlement
@@ -81,9 +82,12 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         session = build_session(mode)
-    except NotImplementedError:
+    except FireError as exc:
+        # Live is unavailable (no approved endpoint, or no credentials saved).
+        # Demo always works, so fall back rather than refusing to start.
         logging.getLogger("fire").warning(
-            "Live venue is not available in this build, falling back to demo")
+            "live venue unavailable (%s), falling back to demo",
+            type(exc).__name__)
         session = build_session(VenueMode.DEMO)
         mode = VenueMode.DEMO
 

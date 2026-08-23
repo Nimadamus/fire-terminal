@@ -1,0 +1,70 @@
+"""The single seam where an approved API path gets wired in.
+
+Everything else in this package is written against `EndpointProfile`. When
+written authorization arrives, one profile object is filled in and the live
+adapter works. No other file changes, and nothing above the venue layer is
+touched at all.
+
+Until then `ACTIVE` is UNCONFIGURED, every live construction raises
+`ExchangeNotConfigured`, and the app falls back to demo with a clear message.
+This is a deliberate compliance gate, not an unfinished feature: the code path
+is complete and tested, it simply has nowhere to point.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class EndpointProfile:
+    """Everything venue-specific about reaching an exchange."""
+    name: str
+    base_url: str = ""
+    api_root: str = ""
+    paths: dict[str, str] = field(default_factory=dict)
+    configured: bool = False
+
+    # conduct limits, kept here so they are reviewed alongside the endpoints
+    max_requests_per_second: float = 5.0
+    market_poll_seconds: float = 1.0
+    book_poll_seconds: float = 0.5
+    account_poll_seconds: float = 2.0
+
+    def url(self, key: str, **fmt: object) -> str:
+        if not self.configured:
+            raise RuntimeError("endpoint profile is not configured")
+        path = self.paths[key].format(**fmt)
+        return f"{self.base_url}{self.api_root}{path}"
+
+    def signing_path(self, key: str, **fmt: object) -> str:
+        """The path portion that participates in the request signature."""
+        if not self.configured:
+            raise RuntimeError("endpoint profile is not configured")
+        return f"{self.api_root}{self.paths[key].format(**fmt)}"
+
+
+# The shape a configured profile takes. Kept as documentation so the wiring
+# step is mechanical rather than archaeological.
+REQUIRED_PATH_KEYS = (
+    "markets",        # list open markets for a series
+    "market",         # one market by ticker
+    "orderbook",      # depth for one ticker
+    "balance",        # account cash
+    "positions",      # open positions
+    "orders",         # resting orders, and POST target for new orders
+    "fills",          # executed trades
+)
+
+
+UNCONFIGURED = EndpointProfile(
+    name="unconfigured",
+    configured=False,
+)
+
+# Wire the approved profile here once permission is granted in writing, then
+# set ACTIVE to it. Nothing else in the codebase needs to change.
+ACTIVE: EndpointProfile = UNCONFIGURED
+
+
+def is_configured() -> bool:
+    return ACTIVE.configured

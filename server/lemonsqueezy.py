@@ -52,9 +52,14 @@ def _subscription_id(payload: dict) -> str:
 
 
 def _plan_name(payload: dict) -> str:
-    """Monthly or annual, from whatever the variant is called."""
-    variant = str(_attr(payload, "variant_name") or "")
-    lowered = variant.lower()
+    """Monthly or annual.
+
+    Read from the product name as well as the variant. A single price product
+    gets a variant called "Default", so the variant name alone tells you
+    nothing and every plan would come through as a bare "FIRE".
+    """
+    lowered = " ".join(str(_attr(payload, key) or "")
+                       for key in ("variant_name", "product_name")).lower()
     if "annual" in lowered or "year" in lowered:
         return "FIRE Annual"
     if "month" in lowered:

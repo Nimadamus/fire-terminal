@@ -194,3 +194,13 @@ def test_an_unknown_event_is_ignored_quietly(service):
     client, _, _ = service
     r = _post(client, "license_key_created", {}, sub_id="sub_x")
     assert r.status_code == 200 and "ignored" in r.json()
+
+
+def test_the_plan_is_read_from_the_product_when_the_variant_is_default(service):
+    """A single price product has a variant literally called "Default"."""
+    client, store_mod, _ = service
+    _post(client, "subscription_created",
+          {"user_email": "d@example.com", "status": "active",
+           "variant_name": "Default", "product_name": "FIRE Annual"},
+          sub_id="sub_default")
+    assert store_mod.licence_by_subscription("sub_default")["plan"] == "FIRE Annual"

@@ -21,8 +21,8 @@ window.FIRE_CONFIG = {
   // Lemon Squeezy hosted checkout, one URL per plan. They are the merchant of
   // record, so the buy buttons are plain links and this site never touches a
   // card or a payment API.
-  checkoutMonthly: "",
-  checkoutAnnual: "",
+  checkoutMonthly: "https://fireterminalapp.lemonsqueezy.com/checkout/buy/2d7763bd-a79b-4417-9844-d2bb99998812",
+  checkoutAnnual: "https://fireterminalapp.lemonsqueezy.com/checkout/buy/76eec69b-d2ae-41c5-a74e-973143a8e450",
 
   // Where a customer reaches a human.
   supportEmail: "nj2121@gmail.com",

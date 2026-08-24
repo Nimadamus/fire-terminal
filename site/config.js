@@ -18,6 +18,12 @@ window.FIRE_CONFIG = {
   // people who would have bought.
   selling: false,
 
+  // Lemon Squeezy hosted checkout, one URL per plan. They are the merchant of
+  // record, so the buy buttons are plain links and this site never touches a
+  // card or a payment API.
+  checkoutMonthly: "",
+  checkoutAnnual: "",
+
   // Where a customer reaches a human.
   supportEmail: "nj2121@gmail.com",
 
@@ -56,7 +62,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Before selling opens, the buy buttons come off entirely and the waitlist
   // takes their place. A button that silently fails is worse than one that is
   // honestly not there yet.
-  var open = c.selling === true;
+  var open = c.selling === true
+             && Boolean(c.checkoutMonthly || c.checkoutAnnual || c.api);
   var waitlist = document.getElementById("waitlist");
   if (!open) {
     document.querySelectorAll("[data-plan]").forEach(function (el) {

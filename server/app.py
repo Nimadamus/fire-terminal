@@ -17,6 +17,7 @@ right way round for a trading tool.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -422,6 +423,35 @@ def release(body: ReleaseIn) -> dict[str, Any]:
     if not store.release_install(target, key):
         raise HTTPException(404, "That computer is not on this licence.")
     return {"ok": True, "seats_used": len(store.installs_for(key))}
+
+
+# --------------------------------------------------------------------------
+# Lemon Squeezy, the merchant of record alternative
+# --------------------------------------------------------------------------
+@app.post("/ls/webhook")
+async def lemonsqueezy_webhook(request: Request) -> JSONResponse:
+    """Signed with HMAC-SHA256 over the raw body, hex, in X-Signature."""
+    import lemonsqueezy
+
+    if not lemonsqueezy.SIGNING_SECRET:
+        raise HTTPException(503, "Lemon Squeezy is not configured.")
+
+    raw = await request.body()
+    if not lemonsqueezy.verify(raw, request.headers.get("x-signature", "")):
+        log.warning("rejected lemonsqueezy webhook: bad signature")
+        raise HTTPException(400, "Signature check failed.")
+
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(400, "Body is not readable.") from exc
+
+    meta = payload.get("meta") or {}
+    event = str(meta.get("event_name") or "")
+    event_id = str(request.headers.get("x-event-id")
+                   or meta.get("webhook_id") or "")
+    log.info("lemonsqueezy event %s", event)
+    return JSONResponse(lemonsqueezy.handle(event, payload, event_id))
 
 
 # --------------------------------------------------------------------------

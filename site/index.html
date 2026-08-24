@@ -476,6 +476,10 @@ document.querySelectorAll('[data-plan]').forEach(function (el) {
   el.addEventListener('click', function (event) {
     event.preventDefault();
     var plan = el.getAttribute('data-plan');
+    // A hosted checkout is just a link. Prefer it: no API call, no card here.
+    var hosted = (window.FIRE_CONFIG || {})[
+      plan === 'annual' ? 'checkoutAnnual' : 'checkoutMonthly'];
+    if (hosted) { window.location = hosted; return; }
     var original = el.textContent;
     el.textContent = 'Opening checkout...';
     fetch(window.FIRE_API + '/checkout', {

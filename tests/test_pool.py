@@ -72,17 +72,15 @@ def test_a_warm_webhook_opens_no_new_connection(service):
 
 def test_the_pool_never_exceeds_its_size_under_a_burst(service):
     client, store = service
-    import psycopg
     peak = [0]
     stop = threading.Event()
 
     def watch():
-        with psycopg.connect(TEST_PG) as conn:
-            while not stop.is_set():
-                n = conn.execute("SELECT count(*) FROM pg_stat_activity"
-                                 " WHERE application_name = 'fire-licence'").fetchone()[0]
-                peak[0] = max(peak[0], n)
-                time.sleep(0.02)
+        # This process's pool only. Earlier test modules imported their own
+        # copy of the service, and their idle connections are not ours.
+        while not stop.is_set():
+            peak[0] = max(peak[0], store._pool.get_stats().get("pool_size", 0))
+            time.sleep(0.005)
     w = threading.Thread(target=watch)
     w.start()
     threads = [threading.Thread(target=purchase, args=(client,)) for _ in range(20)]

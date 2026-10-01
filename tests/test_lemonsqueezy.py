@@ -36,9 +36,9 @@ def service(tmp_path_factory):
     os.environ["FIRE_SIGNING_KEY"] = private.private_bytes(
         serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption()).decode()
-    os.environ["FIRE_DB"] = str(tmp / "ls.db")
     os.environ["LEMONSQUEEZY_SIGNING_SECRET"] = SECRET
-    os.environ.pop("DATABASE_URL", None)
+    from conftest import use_test_database
+    use_test_database(str(tmp / "ls.db"))
     public = base64.urlsafe_b64encode(
         private.public_key().public_bytes(
             serialization.Encoding.Raw,

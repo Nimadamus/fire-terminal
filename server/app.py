@@ -64,6 +64,16 @@ app = FastAPI(title="FIRE licence service", docs_url=None, redoc_url=None,
               lifespan=lifespan)
 
 
+@app.exception_handler(store.DatabaseUnavailable)
+async def _database_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    """503, not 500, and a Retry-After: Stripe and Lemon Squeezy both retry a
+    failed webhook, and the client retries an activation. Nothing was written,
+    so nothing is half done."""
+    log.error("database unavailable; answered 503")
+    return JSONResponse({"detail": "Temporarily unavailable, please retry."},
+                        status_code=503, headers={"Retry-After": "30"})
+
+
 def _stripe():
     if not STRIPE_SECRET:
         raise HTTPException(503, "Billing is not configured on this service.")
@@ -258,6 +268,9 @@ async def stripe_webhook(request: Request,
     elif kind == "invoice.payment_failed":
         _on_payment_failed(obj)
 
+    # Only now. If anything above raised, Stripe retries and we try again.
+    if event_id:
+        store.mark_event(event_id, kind)
     return JSONResponse({"ok": True})
 
 

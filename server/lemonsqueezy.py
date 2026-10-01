@@ -87,9 +87,18 @@ def _expires(payload: dict) -> Optional[float]:
 
 
 def handle(event: str, payload: dict, event_id: str = "") -> dict[str, Any]:
-    """One webhook. Idempotent, and never raises at the caller."""
+    """One webhook. Idempotent. Raises only if the database is unreachable,
+    which the service answers with a 503 so Lemon Squeezy retries."""
     if event_id and store.seen_event(event_id, event):
         return {"ok": True, "duplicate": True}
+    result = _dispatch(event, payload)
+    # Recorded only after the work is done, so a failure part way is retried.
+    if event_id:
+        store.mark_event(event_id, event)
+    return result
+
+
+def _dispatch(event: str, payload: dict) -> dict[str, Any]:
 
     subscription_id = _subscription_id(payload)
     email = str(_attr(payload, "user_email") or "")
@@ -120,13 +129,16 @@ def _issue(subscription_id: str, email: str, payload: dict) -> dict[str, Any]:
         return {"ok": True, "duplicate": True}
 
     key = licences.new_key()
-    store.create_licence(
+    created = store.create_licence(
         key, email=email, plan=_plan_name(payload), expires=_expires(payload),
         stripe_customer=str(_attr(payload, "customer_id") or ""),
         stripe_sub=subscription_id,
         # The success page looks a purchase up by order id, the way it does
         # with a Stripe checkout session.
         checkout_session=str(_attr(payload, "order_id") or ""))
+    if not created:
+        # Another delivery of this purchase won the race. Same answer as above.
+        return {"ok": True, "duplicate": True}
     log.info("issued licence for lemonsqueezy subscription %s", subscription_id)
     return {"ok": True, "issued": True}
 

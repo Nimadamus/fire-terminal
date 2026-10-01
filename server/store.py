@@ -4,13 +4,18 @@ Deliberately not an ORM. There are three tables and about a dozen queries, and
 a dependency that has to be upgraded in lockstep with a payments integration is
 not worth the typing it saves.
 
-Runs on SQLite by default so the service can be developed and tested with no
-infrastructure at all, and on Postgres when DATABASE_URL is set, which is what
-it should run on in production. The only difference between them that matters
-here is the placeholder character.
+Postgres, from DATABASE_URL, is the only database production may use. SQLite
+exists for local development and the test suite and nothing else: a deployed
+service with no Postgres refuses to start rather than quietly writing licences
+to a file the host will throw away. That is exactly what happened on Render's
+free plan, where /tmp is wiped every time the instance sleeps.
+
+The only difference between the two that matters here is the placeholder
+character, and every write is written so it is safe on both.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import threading
@@ -18,26 +23,78 @@ import time
 from contextlib import contextmanager
 from typing import Any, Iterable, Optional
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+log = logging.getLogger("fire.licence.store")
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 SQLITE_PATH = os.environ.get("FIRE_DB", "fire_licences.db")
 
+# A managed Postgres that scales to zero (Neon) takes a moment to wake, and a
+# network blip should not turn into a lost purchase. Bounded on purpose: a
+# webhook that hangs is as bad as one that fails.
+CONNECT_TIMEOUT_S = int(os.environ.get("FIRE_DB_CONNECT_TIMEOUT", "10"))
+CONNECT_ATTEMPTS = 3
+
 _lock = threading.RLock()
+
+
+class DatabaseUnavailable(RuntimeError):
+    """The database could not be reached. Callers answer 503 so senders retry."""
+
+
+class ConfigurationError(RuntimeError):
+    """The service is deployed without a durable database."""
 
 
 def _is_postgres() -> bool:
     return DATABASE_URL.startswith(("postgres://", "postgresql://"))
 
 
+def _is_deployed() -> bool:
+    """True on a real host. Render sets RENDER; anything else sets FIRE_ENV."""
+    return bool(os.environ.get("RENDER")) or \
+        os.environ.get("FIRE_ENV", "").lower() == "production"
+
+
+def backend() -> str:
+    """Which database this process uses. Never includes the URL or password."""
+    return "postgres" if _is_postgres() else "sqlite"
+
+
+def _check_configuration() -> None:
+    if DATABASE_URL and not _is_postgres():
+        # Never fall back to SQLite because a URL was mistyped.
+        raise ConfigurationError("DATABASE_URL is set but is not a Postgres URL.")
+    if _is_deployed() and not _is_postgres():
+        raise ConfigurationError(
+            "No Postgres DATABASE_URL on a deployed service. Refusing to start: "
+            "licences written to local disk here would be lost.")
+
+
 def _placeholder() -> str:
     return "%s" if _is_postgres() else "?"
+
+
+def _connect_postgres():
+    import psycopg
+    last: Optional[Exception] = None
+    for attempt in range(CONNECT_ATTEMPTS):
+        try:
+            return psycopg.connect(DATABASE_URL, connect_timeout=CONNECT_TIMEOUT_S,
+                                   application_name="fire-licence")
+        except psycopg.OperationalError as exc:
+            last = exc
+            # The type only. The message can carry the host and user.
+            log.warning("database connect attempt %d failed: %s",
+                        attempt + 1, type(exc).__name__)
+            time.sleep(0.5 * (2 ** attempt))
+    raise DatabaseUnavailable("database unreachable") from last
 
 
 @contextmanager
 def connect():
     """One connection per call. Cheap, and it avoids every pooling question."""
     if _is_postgres():
-        import psycopg
-        conn = psycopg.connect(DATABASE_URL)
+        conn = _connect_postgres()
     else:
         conn = sqlite3.connect(SQLITE_PATH)
     try:
@@ -94,23 +151,42 @@ SCHEMA = (
         seen    DOUBLE PRECISION NOT NULL
     )
     """,
+    # One licence per subscription, enforced by the database rather than by a
+    # read before the write, so two deliveries of the same purchase arriving
+    # together cannot both issue a key.
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS licences_one_per_subscription
+        ON licences (stripe_sub) WHERE stripe_sub <> ''
+    """,
+    # And one licence per checkout (Stripe session or Lemon Squeezy order).
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS licences_one_per_checkout
+        ON licences (checkout_session) WHERE checkout_session <> ''
+    """,
 )
 
 
 def init() -> None:
+    """Create anything missing. Every statement is idempotent, so this runs on
+    every start and is the whole migration story for a schema this small."""
+    _check_configuration()
     with _lock, connect() as conn:
         cur = conn.cursor()
         for statement in SCHEMA:
             cur.execute(statement)
+    log.info("database ready: %s", backend())
 
 
 def _rows(cur) -> list[tuple]:
     return list(cur.fetchall())
 
 
-def execute(sql: str, params: Iterable[Any] = ()) -> None:
+def execute(sql: str, params: Iterable[Any] = ()) -> int:
+    """Run one write. Returns the number of rows it changed."""
     with _lock, connect() as conn:
-        conn.cursor().execute(q(sql), tuple(params))
+        cur = conn.cursor()
+        cur.execute(q(sql), tuple(params))
+        return int(cur.rowcount or 0)
 
 
 def fetchone(sql: str, params: Iterable[Any] = ()) -> Optional[tuple]:
@@ -128,13 +204,15 @@ LICENCE_COLUMNS = ("key", "email", "plan", "status", "expires", "seats",
 
 def create_licence(key: str, email: str, plan: str, expires: Optional[float],
                    stripe_customer: str = "", stripe_sub: str = "",
-                   checkout_session: str = "", seats: int = 3) -> None:
-    execute(
+                   checkout_session: str = "", seats: int = 3) -> bool:
+    """False if this subscription already has a licence (nothing written)."""
+    return execute(
         "INSERT INTO licences (key, email, plan, status, expires, seats,"
         " stripe_customer, stripe_sub, checkout_session, created)"
-        " VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)",
+        " VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT DO NOTHING",
         (key, email, plan, expires, seats, stripe_customer, stripe_sub,
-         checkout_session, time.time()))
+         checkout_session, time.time())) == 1
 
 
 def licence(key: str) -> Optional[dict]:
@@ -176,13 +254,10 @@ def set_status(key: str, status: str, expires: Optional[float] = None) -> None:
 # -- installs --------------------------------------------------------------
 def bind_install(install: str, key: str) -> None:
     now = time.time()
-    if fetchone("SELECT 1 FROM installs WHERE install = ? AND key = ?",
-                (install, key)):
-        execute("UPDATE installs SET last_seen = ? WHERE install = ? AND key = ?",
-                (now, install, key))
-        return
     execute("INSERT INTO installs (install, key, first_seen, last_seen)"
-            " VALUES (?, ?, ?, ?)", (install, key, now, now))
+            " VALUES (?, ?, ?, ?)"
+            " ON CONFLICT (install, key) DO UPDATE SET last_seen = excluded.last_seen",
+            (install, key, now, now))
 
 
 def install_count(key: str) -> int:
@@ -203,26 +278,29 @@ def key_for_install(install: str) -> Optional[str]:
 
 # -- webhook idempotency ---------------------------------------------------
 def seen_event(event_id: str, kind: str = "") -> bool:
-    """True if this Stripe event was already handled.
+    """True if this webhook event was already handled successfully.
 
-    Stripe retries, and it can deliver the same event more than once. Creating
-    two licences for one purchase is the kind of mistake a customer notices.
+    Only asks. The event is recorded by mark_event once its work is done, so a
+    delivery that fails halfway (the database dropped, the process restarted)
+    is retried by the sender and processed then, instead of being remembered as
+    handled and lost. Duplicate work is still impossible: every write a
+    webhook makes is idempotent on its own.
     """
-    if fetchone("SELECT 1 FROM events WHERE id = ?", (event_id,)):
-        return True
-    execute("INSERT INTO events (id, kind, seen) VALUES (?, ?, ?)",
-            (event_id, kind, time.time()))
-    return False
+    return fetchone("SELECT 1 FROM events WHERE id = ?", (event_id,)) is not None
+
+
+def mark_event(event_id: str, kind: str = "") -> None:
+    """Record a webhook event as handled. Safe to call twice."""
+    execute("INSERT INTO events (id, kind, seen) VALUES (?, ?, ?)"
+            " ON CONFLICT (id) DO NOTHING", (event_id, kind, time.time()))
 
 
 # -- waitlist --------------------------------------------------------------
 def join_waitlist(email: str, note: str = "", source: str = "") -> bool:
     """True if this is a new signup. Signing up twice is not an error."""
-    if fetchone("SELECT 1 FROM waitlist WHERE email = ?", (email,)):
-        return False
-    execute("INSERT INTO waitlist (email, note, source, joined)"
-            " VALUES (?, ?, ?, ?)", (email, note[:500], source[:60], time.time()))
-    return True
+    return execute("INSERT INTO waitlist (email, note, source, joined)"
+                   " VALUES (?, ?, ?, ?) ON CONFLICT (email) DO NOTHING",
+                   (email, note[:500], source[:60], time.time())) == 1
 
 
 def waitlist_size() -> int:

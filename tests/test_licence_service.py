@@ -44,13 +44,14 @@ def service(tmp_path_factory):
             serialization.PublicFormat.Raw)).decode("ascii").rstrip("=")
 
     os.environ["FIRE_SIGNING_KEY"] = pem
-    os.environ["FIRE_DB"] = str(tmp / "licences.db")
+
     # A webhook secret, so the signed webhook path is actually exercised. It
     # was not, and a 500 in that handler lived here undetected: every purchase
     # would have failed and no customer would have received a licence.
     os.environ["STRIPE_WEBHOOK_SECRET"] = WEBHOOK_SECRET
     os.environ["STRIPE_SECRET_KEY"] = ""
-    os.environ.pop("DATABASE_URL", None)
+    from conftest import use_test_database
+    use_test_database(str(tmp / "licences.db"))
 
     sys.path.insert(0, str(SERVER))
     for name in ("app", "store", "licences"):
@@ -197,7 +198,12 @@ def test_the_recheck_remembers_the_key_so_the_client_need_not_send_it(service):
 # -- webhook safety --------------------------------------------------------
 def test_a_repeated_stripe_event_does_not_issue_a_second_licence(service):
     _, store_mod, _, _ = service
+    # Asking does not record. Only finished work is marked, so a delivery that
+    # failed part way is processed again on the retry.
     assert store_mod.seen_event("evt_dupe", "checkout.session.completed") is False
+    assert store_mod.seen_event("evt_dupe", "checkout.session.completed") is False
+    store_mod.mark_event("evt_dupe", "checkout.session.completed")
+    store_mod.mark_event("evt_dupe", "checkout.session.completed")
     assert store_mod.seen_event("evt_dupe", "checkout.session.completed") is True
 
 

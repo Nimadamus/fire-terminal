@@ -90,6 +90,9 @@ def main() -> int:
     if not DB.startswith(("postgres://", "postgresql://")):
         print("Set FIRE_TEST_DATABASE_URL to a throwaway Postgres.")
         return 2
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from target_guard import assert_safe
+    assert_safe(DB)                     # never production, before any DROP
     with psycopg.connect(DB) as conn:
         for table in ("installs", "events", "waitlist", "licences"):
             conn.execute(f"DROP TABLE IF EXISTS {table}")

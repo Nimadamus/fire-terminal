@@ -20,6 +20,8 @@ def use_test_database(sqlite_path: str) -> None:
     if not TEST_PG:
         os.environ.pop("DATABASE_URL", None)
         return
+    from target_guard import assert_safe
+    assert_safe(TEST_PG)                # never production, before any DROP
     os.environ["DATABASE_URL"] = TEST_PG
     import psycopg
     with psycopg.connect(TEST_PG) as conn:

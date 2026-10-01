@@ -172,6 +172,11 @@ def init() -> None:
     _check_configuration()
     with _lock, connect() as conn:
         cur = conn.cursor()
+        if _is_postgres():
+            # CREATE ... IF NOT EXISTS is not safe when two instances start at
+            # once (both pass the check, one fails on the catalogue). One
+            # transaction level lock makes every starting instance take turns.
+            cur.execute("SELECT pg_advisory_xact_lock(724100117)")
         for statement in SCHEMA:
             cur.execute(statement)
     log.info("database ready: %s", backend())

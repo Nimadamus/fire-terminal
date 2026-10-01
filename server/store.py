@@ -32,9 +32,25 @@ SQLITE_PATH = os.environ.get("FIRE_DB", "fire_licences.db")
 # network blip should not turn into a lost purchase. Bounded on purpose: a
 # webhook that hangs is as bad as one that fails.
 CONNECT_TIMEOUT_S = int(os.environ.get("FIRE_DB_CONNECT_TIMEOUT", "10"))
-CONNECT_ATTEMPTS = 3
 
+# Postgres connections are pooled and reused. A new TLS connection to Neon costs
+# about a quarter of a second; a webhook makes half a dozen queries. Small on
+# purpose: one instance never holds more than POOL_MAX, and an idle connection
+# is closed after POOL_IDLE_S, well before Neon suspends its compute, so the
+# pool never keeps the database awake and never hands out a connection Neon
+# has already dropped.
+POOL_MAX = int(os.environ.get("FIRE_DB_POOL_MAX", "4"))
+POOL_IDLE_S = 60.0
+POOL_LIFETIME_S = 900.0
+POOL_WAIT_S = float(os.environ.get("FIRE_DB_POOL_WAIT", "15"))
+
+# SQLite allows one writer, so SQLite calls take turns inside the process.
+# Postgres needs no lock: the unique indexes and ON CONFLICT writes are what
+# make concurrent deliveries safe, across threads and across instances alike.
 _lock = threading.RLock()
+_pool = None
+_pool_guard = threading.Lock()
+_opened = 0                      # connections actually created, for measurement
 
 
 class DatabaseUnavailable(RuntimeError):
@@ -74,29 +90,75 @@ def _placeholder() -> str:
     return "%s" if _is_postgres() else "?"
 
 
-def _connect_postgres():
-    import psycopg
-    last: Optional[Exception] = None
-    for attempt in range(CONNECT_ATTEMPTS):
-        try:
-            return psycopg.connect(DATABASE_URL, connect_timeout=CONNECT_TIMEOUT_S,
-                                   application_name="fire-licence")
-        except psycopg.OperationalError as exc:
-            last = exc
-            # The type only. The message can carry the host and user.
-            log.warning("database connect attempt %d failed: %s",
-                        attempt + 1, type(exc).__name__)
-            time.sleep(0.5 * (2 ** attempt))
-    raise DatabaseUnavailable("database unreachable") from last
+def _count_new_connection(_conn) -> None:
+    global _opened
+    _opened += 1
+
+
+def connections_opened() -> int:
+    """How many database connections this process has created so far."""
+    return _opened
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        with _pool_guard:
+            if _pool is None:
+                from psycopg_pool import ConnectionPool
+                _pool = ConnectionPool(
+                    DATABASE_URL, min_size=0, max_size=POOL_MAX,
+                    max_idle=POOL_IDLE_S, max_lifetime=POOL_LIFETIME_S,
+                    timeout=POOL_WAIT_S, reconnect_timeout=60.0,
+                    configure=_count_new_connection, name="fire-licence",
+                    kwargs={"connect_timeout": CONNECT_TIMEOUT_S,
+                            "application_name": "fire-licence"},
+                    open=True)
+    return _pool
+
+
+def close() -> None:
+    """Close every pooled connection. Called when the service shuts down."""
+    global _pool
+    with _pool_guard:
+        if _pool is not None:
+            _pool.close()
+            _pool = None
+
+
+@contextmanager
+def _guard():
+    if _is_postgres():
+        yield
+    else:
+        with _lock:
+            yield
 
 
 @contextmanager
 def connect():
-    """One connection per call. Cheap, and it avoids every pooling question."""
+    """A connection for one unit of work, committed on success and rolled
+    back on any error. Postgres connections come from the pool and go back to
+    it; one left broken by a failure is discarded by the pool, never reused."""
     if _is_postgres():
-        conn = _connect_postgres()
-    else:
-        conn = sqlite3.connect(SQLITE_PATH)
+        import psycopg
+        from psycopg_pool import PoolTimeout
+        try:
+            ctx = _get_pool().connection()
+            conn = ctx.__enter__()
+        except (PoolTimeout, psycopg.OperationalError) as exc:
+            # The type only. The message can carry the host and user.
+            log.warning("database unavailable: %s", type(exc).__name__)
+            raise DatabaseUnavailable("database unreachable") from exc
+        try:
+            yield conn
+        except BaseException as exc:
+            ctx.__exit__(type(exc), exc, exc.__traceback__)
+            raise
+        else:
+            ctx.__exit__(None, None, None)
+        return
+    conn = sqlite3.connect(SQLITE_PATH)
     try:
         yield conn
         conn.commit()
@@ -105,6 +167,31 @@ def connect():
         raise
     finally:
         conn.close()
+
+
+def _run(work):
+    """Run one unit of work, retrying once on a dropped connection.
+
+    A pooled connection can be cut by the server between uses (Neon suspends
+    its compute; a network blip). The pool discards it on the way back, and the
+    retry gets a fresh one. Safe to repeat: every write here is idempotent, and
+    a statement that failed on a dead connection was never committed.
+    """
+    import psycopg
+    for attempt in (1, 2):
+        try:
+            with _guard(), connect() as conn:
+                return work(conn)
+        except psycopg.OperationalError as exc:
+            if attempt == 2 or not _is_postgres():
+                log.warning("database error: %s", type(exc).__name__)
+                raise DatabaseUnavailable("database error") from exc
+            log.info("retrying on a fresh connection after %s", type(exc).__name__)
+            # When the server dropped one connection it usually dropped them
+            # all (Neon suspending). Test every idle one now and discard the
+            # dead, so the retry cannot pick up another casualty.
+            if _pool is not None:
+                _pool.check()
 
 
 def q(sql: str) -> str:
@@ -170,7 +257,7 @@ def init() -> None:
     """Create anything missing. Every statement is idempotent, so this runs on
     every start and is the whole migration story for a schema this small."""
     _check_configuration()
-    with _lock, connect() as conn:
+    with _guard(), connect() as conn:
         cur = conn.cursor()
         if _is_postgres():
             # CREATE ... IF NOT EXISTS is not safe when two instances start at
@@ -188,18 +275,20 @@ def _rows(cur) -> list[tuple]:
 
 def execute(sql: str, params: Iterable[Any] = ()) -> int:
     """Run one write. Returns the number of rows it changed."""
-    with _lock, connect() as conn:
+    def work(conn):
         cur = conn.cursor()
         cur.execute(q(sql), tuple(params))
         return int(cur.rowcount or 0)
+    return _run(work)
 
 
 def fetchone(sql: str, params: Iterable[Any] = ()) -> Optional[tuple]:
-    with _lock, connect() as conn:
+    def work(conn):
         cur = conn.cursor()
         cur.execute(q(sql), tuple(params))
         row = cur.fetchone()
         return tuple(row) if row else None
+    return _run(work)
 
 
 # -- licences --------------------------------------------------------------
@@ -330,12 +419,13 @@ def waitlist_size() -> int:
 
 def installs_for(key: str) -> list[dict]:
     """Every machine bound to a licence, newest activity first."""
-    with _lock, connect() as conn:
+    def work(conn):
         cur = conn.cursor()
         cur.execute(q("SELECT install, first_seen, last_seen FROM installs"
                       " WHERE key = ? ORDER BY last_seen DESC"), (key,))
         return [{"install": r[0], "first_seen": r[1], "last_seen": r[2]}
                 for r in cur.fetchall()]
+    return _run(work)
 
 
 def release_install(install: str, key: str) -> bool:

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -56,6 +57,7 @@ async def lifespan(_app: FastAPI):
     if not STRIPE_WEBHOOK_SECRET:
         log.warning("STRIPE_WEBHOOK_SECRET is not set: webhooks are disabled")
     yield
+    store.close()
 
 
 # No docs endpoints. This service has four routes and publishing a schema
@@ -250,10 +252,18 @@ async def stripe_webhook(request: Request,
         log.warning("rejected webhook: %s", type(exc).__name__)
         raise HTTPException(400, "Signature check failed.") from exc
 
+    # Reading the body is the only async part. The database work runs on the
+    # thread pool so one slow query never stalls every other request.
+    return JSONResponse(await run_in_threadpool(_process_stripe_event, stripe,
+                                                event, background))
+
+
+def _process_stripe_event(stripe, event: dict,
+                          background: BackgroundTasks) -> dict[str, Any]:
     event_id = str(event.get("id") or "")
     kind = str(event.get("type") or "")
     if event_id and store.seen_event(event_id, kind):
-        return JSONResponse({"ok": True, "duplicate": True})
+        return {"ok": True, "duplicate": True}
 
     obj = event["data"]["object"]
     log.info("stripe event %s", kind)
@@ -271,7 +281,7 @@ async def stripe_webhook(request: Request,
     # Only now. If anything above raised, Stripe retries and we try again.
     if event_id:
         store.mark_event(event_id, kind)
-    return JSONResponse({"ok": True})
+    return {"ok": True}
 
 
 def _on_checkout_complete(stripe, session: Any,
@@ -464,7 +474,9 @@ async def lemonsqueezy_webhook(request: Request) -> JSONResponse:
     event_id = str(request.headers.get("x-event-id")
                    or meta.get("webhook_id") or "")
     log.info("lemonsqueezy event %s", event)
-    return JSONResponse(lemonsqueezy.handle(event, payload, event_id))
+    # Off the event loop, for the same reason as the Stripe webhook.
+    return JSONResponse(await run_in_threadpool(lemonsqueezy.handle, event,
+                                                payload, event_id))
 
 
 # --------------------------------------------------------------------------

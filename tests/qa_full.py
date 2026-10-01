@@ -249,6 +249,65 @@ def main() -> int:
             bad += 1
     check(bad == 0, f"concurrent webhooks over 2 processes: {rounds} purchases, {bad} bad")
 
+    # measured, one request at a time, after warm up
+    def backends():
+        return set(rows("SELECT pid, backend_start FROM pg_stat_activity"
+                        " WHERE application_name = 'fire-licence'"))
+    seen_backends = backends()
+    new_backends = set()
+    for i in range(10):
+        p = Purchase()
+        timed("seq new purchase", send, a, p.subscription())
+        timed("seq order after sub", send, a, p.order_created())
+        timed("seq renewal", send, a, p.subscription("subscription_updated",
+                                                     renews=p.renews + 86400))
+        k = requests.get(a + "/licence", params={"session_id": str(p.order)}, timeout=30).json()["key"]
+        timed("seq activate", requests.post, a + "/activate",
+              json={"key": k, "install": f"seq-{i}"}, timeout=30)
+        timed("seq entitlement", requests.post, a + "/entitlement",
+              json={"install": f"seq-{i}"}, timeout=30)
+        now = backends()
+        new_backends |= now - seen_backends
+        seen_backends |= now
+    print(f"INFO  connections created across 50 sequential requests: {len(new_backends)}")
+
+    # a burst: 12 webhooks at once at ONE process, while /health is timed
+    burst_peak = [0]
+    health_ms: list[float] = []
+    stop_watch = threading.Event()
+
+    def watch():
+        with psycopg.connect(DB) as conn:
+            while not stop_watch.is_set():
+                n = conn.execute("SELECT count(*) FROM pg_stat_activity"
+                                 " WHERE application_name = 'fire-licence'").fetchone()[0]
+                burst_peak[0] = max(burst_peak[0], n)
+                time.sleep(0.05)
+
+    def probe():
+        while not stop_watch.is_set():
+            t = time.perf_counter()
+            requests.get(a + "/health", timeout=30)
+            health_ms.append((time.perf_counter() - t) * 1000)
+            time.sleep(0.05)
+    burst = [Purchase() for _ in range(12)]
+    barrier = threading.Barrier(len(burst))
+
+    def fire(p):
+        barrier.wait()
+        timed("burst webhook", send, a, p.subscription())
+    watchers = [threading.Thread(target=watch), threading.Thread(target=probe)]
+    for w in watchers: w.start()
+    ts = [threading.Thread(target=fire, args=(p,)) for p in burst]
+    for t in ts: t.start()
+    for t in ts: t.join()
+    stop_watch.set()
+    for w in watchers: w.join()
+    check(all(len(licences_for(p)) == 1 for p in burst), "burst of 12: one licence each")
+    print(f"INFO  burst: peak connections across both processes {burst_peak[0]};"
+          f" /health during burst median {statistics.median(health_ms):.0f} ms"
+          f" max {max(health_ms):.0f} ms (n={len(health_ms)})")
+
     # kill both, restart one, read everything back
     before = {t: rows(f"SELECT COUNT(*) FROM {t}")[0][0]
               for t in ("licences", "installs", "waitlist", "events")}

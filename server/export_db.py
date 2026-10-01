@@ -34,6 +34,13 @@ def main() -> int:
     with psycopg.connect(url, connect_timeout=20) as conn:
         conn.read_only = True
         for table in TABLES:
+            exists = conn.execute("SELECT to_regclass(%s) IS NOT NULL",
+                                  (f"public.{table}",)).fetchone()[0]
+            if not exists:
+                # Before the service's first start there are no tables yet.
+                dump["tables"][table] = []
+                dump.setdefault("absent", []).append(table)
+                continue
             cur = conn.execute(f"SELECT * FROM {table} ORDER BY 1")
             cols = [c.name for c in cur.description]
             dump["tables"][table] = [dict(zip(cols, row)) for row in cur.fetchall()]

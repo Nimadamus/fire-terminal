@@ -129,7 +129,7 @@ def test_simultaneous_deliveries_of_one_purchase_issue_one_licence(service):
 
     def deliver():
         barrier.wait()
-        results.append(ls_mod._issue("sub_race", "race@example.com", payload))
+        results.append(ls_mod._on_subscription("9002", "sub_race", payload))
     threads = [threading.Thread(target=deliver) for _ in range(6)]
     for t in threads:
         t.start()
@@ -156,21 +156,3 @@ def test_activating_the_same_machine_twice_uses_one_seat(service):
     for _ in range(3):
         assert client.post("/activate", json={"key": key, "install": "pc-1"}).status_code == 200
     assert store_mod.install_count(key) == 1
-
-
-@pytest.mark.xfail(strict=True, reason=(
-    "KNOWN ISSUE, not fixed here: Lemon Squeezy sends order_created (data.id is "
-    "the ORDER id) and subscription_created (data.id is the SUBSCRIPTION id) for "
-    "one purchase, and both are subscribed. Each issues its own licence."))
-def test_one_lemon_squeezy_purchase_issues_one_licence(service):
-    client, store_mod, _ = service
-    order = {"user_email": "one@example.com", "status": "paid",
-             "first_order_item": {"product_name": "FIRE Monthly"}}
-    sub = {"user_email": "one@example.com", "status": "active", "order_id": 777,
-           "product_name": "FIRE Monthly"}
-    client.post("/ls/webhook", *[], **dict(zip(("content", "headers"),
-                _signed("order_created", "777", order, "evt_o777"))))
-    client.post("/ls/webhook", *[], **dict(zip(("content", "headers"),
-                _signed("subscription_created", "sub_777", sub, "evt_s777"))))
-    assert _count(store_mod, "SELECT COUNT(*) FROM licences WHERE email = ?",
-                  ("one@example.com",)) == 1

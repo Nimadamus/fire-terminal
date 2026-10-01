@@ -239,6 +239,21 @@ def licence_by_subscription(sub_id: str) -> Optional[dict]:
     return dict(zip(LICENCE_COLUMNS, row)) if row else None
 
 
+def attach_subscription(key: str, sub_id: str) -> bool:
+    """Link a subscription to the licence its order already issued.
+
+    True if the licence now carries this subscription. Only ever fills an empty
+    link: a licence already tied to a different subscription is left alone and
+    False comes back, so one key can never be moved between purchases.
+    The order's provisional expiry is cleared: from here the subscription's
+    own period end, set by the caller, is the only one that counts.
+    """
+    execute("UPDATE licences SET stripe_sub = ?, expires = NULL"
+            " WHERE key = ? AND stripe_sub = ''", (sub_id, key))
+    row = fetchone("SELECT stripe_sub FROM licences WHERE key = ?", (key,))
+    return bool(row) and str(row[0]) == sub_id
+
+
 def set_plan(key: str, plan: str) -> None:
     execute("UPDATE licences SET plan = ? WHERE key = ?", (plan, key))
 

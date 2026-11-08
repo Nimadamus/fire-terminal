@@ -1,9 +1,9 @@
-**LIVE NOW: https://fire-terminal.onrender.com** (waitlist mode, verified working)
+**LIVE NOW: https://fire.trustmyrecord.com** (waitlist mode, verified working)
 
 # FIRE distribution channel map
 
 Researched 2026-08-23. Product state at time of writing: v1 feature complete,
-demo only, staging at https://fire-terminal.onrender.com (free plan, spins down),
+demo only, staging at https://fire.trustmyrecord.com (free plan, spins down),
 no domain, no Stripe account, no code signing, Kalshi A1-A4 unresolved.
 
 ## The gate that decides almost every row
@@ -24,7 +24,7 @@ included. Two mitigations exist and both are Nima's call, not mine:
 
 ## What the live site already establishes (checked 2026-08-23)
 
-https://fire-terminal.onrender.com is up and **names no exchange anywhere**. It
+https://fire.trustmyrecord.com is up and **names no exchange anywhere**. It
 says outright that FIRE "goes on sale once the exchange authorisation we have
 asked for comes back in writing", and collects a waitlist instead of payment.
 That posture is already public, so an exchange-neutral pre-launch listing that

@@ -1,6 +1,6 @@
 # Ready to post
 
-Live page: **https://fire-terminal.onrender.com**
+Live page: **https://fire.trustmyrecord.com**
 
 All of these are waitlist framing, which is what is true today. None claims an
 exchange has approved anything, none names an exchange, and none makes a profit
@@ -30,7 +30,7 @@ Body:
 > on an exchange authorisation answer before selling software that other people
 > trade through. Waitlist is on the page if you want to hear when it opens.
 >
-> https://fire-terminal.onrender.com
+> https://fire.trustmyrecord.com
 >
 > Happy to answer anything about how it is built.
 
@@ -55,7 +55,7 @@ Body:
 > outcome rests on one email. If they say no, I do not release it.
 >
 > Meanwhile the page is up with a waitlist and honest pre-launch framing:
-> https://fire-terminal.onrender.com
+> https://fire.trustmyrecord.com
 >
 > Would be glad to hear from anyone who has been through an exchange or broker
 > authorisation like this.
@@ -66,7 +66,7 @@ Body:
 
 Product: **FIRE**
 Tagline: Every market on one screen. One click to take a side.
-URL: https://fire-terminal.onrender.com
+URL: https://fire.trustmyrecord.com
 Category: Finance, Developer tools
 
 Description:
@@ -87,7 +87,7 @@ Description:
 > anything sends. No signals, no recommendations, it places what you click.
 >
 > Not on sale yet, waiting on an authorisation answer. Waitlist:
-> fire-terminal.onrender.com
+> fire.trustmyrecord.com
 
 ---
 

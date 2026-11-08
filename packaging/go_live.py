@@ -24,7 +24,7 @@ STRIPE_KEY_FILE = Path("C:/Users/BL/fire-terminal-stripe-test.txt")
 RENDER_SERVICE = "srv-da5mdu6417fc73fvg68g"
 RENDER_OWNER = "tea-d75maendiees73fan6kg"
 DOMAIN = "fireterminal.app"
-STAGING = "https://fire-terminal.onrender.com"
+STAGING = "https://fire.trustmyrecord.com"
 VAULT = Path("C:/Users/BL/CREDENTIALS.md")
 
 

@@ -1,6 +1,6 @@
 # FIRE launch state
 
-**Live staging:** https://fire-terminal.onrender.com (Render `srv-da5mdu6417fc73fvg68g`,
+**Live staging:** https://fire.trustmyrecord.com (Render `srv-da5mdu6417fc73fvg68g`,
 free plan, repo `github.com/Nimadamus/fire-terminal`, branch main, autoDeploy on).
 Site, legal pages, waitlist and entitlement all verified live over HTTPS.
 

@@ -15,7 +15,7 @@ answered in writing.
 - **Version:** 1.0.0
 - **Platform:** Windows 10 and Windows 11, 64-bit desktop application
 - **Website:** https://fireterminal.app *(not yet purchased; staging
-  https://fire-terminal.onrender.com)*
+  https://fire.trustmyrecord.com)*
 - **Support:** one human reply within one business day, support@ on the FIRE
   domain *(address not yet created)*
 
